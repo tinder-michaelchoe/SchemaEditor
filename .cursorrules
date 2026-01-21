@@ -1,0 +1,352 @@
+# SchemaEditor Plugin Development Rules
+
+This project uses a plugin architecture where **every feature is a plugin**. The core provides minimal, stable infrastructure while plugins implement all user-facing functionality.
+
+## Architecture Overview
+
+```
+Core (minimal, stable)
+├── PluginRegistry    - Manages plugin lifecycle
+├── ExtensionRegistry - Plugin-to-plugin extensibility
+├── ServiceRegistry   - Shared functionality
+├── EventBus          - Cross-plugin communication
+├── ActionAPI         - Safe state mutations
+├── SlotManager       - UI composition
+└── SimpleAPI         - "Twenty Things" simplified API
+
+Plugins (all features)
+├── tree-view         - Tree-based JSON editor
+├── device-preview    - Live WASM preview
+├── json-preview      - Raw JSON view
+├── error-console     - Validation errors
+└── ... more plugins
+```
+
+## Creating a New Plugin
+
+### 1. Always use `definePlugin()` helper
+
+```typescript
+// plugins/my-plugin/index.ts
+import { definePlugin } from '@/core';
+
+export default definePlugin({
+  manifest: {
+    id: 'my-plugin',
+    name: 'My Plugin',
+    version: '1.0.0',
+    apiVersion: '1.0',
+    activation: 'lazy',
+    activationEvents: ['onSlot:sidebar:left'],
+    capabilities: ['document:read', 'selection:write'],
+    slots: [
+      { slot: 'sidebar:left', component: MyPluginComponent, priority: 50 }
+    ],
+  },
+  onActivate: (ctx) => {
+    console.log('Plugin activated');
+  },
+});
+```
+
+### 2. Declare ALL capabilities you use in manifest
+
+Capabilities follow the principle of least privilege. Only request what you need:
+
+| Capability | What it grants |
+|------------|----------------|
+| `document:read` | Read schema, data, errors |
+| `document:write` | Modify document via actions |
+| `selection:read` | Read selected/editing path |
+| `selection:write` | Change selection |
+| `ui:read` | Read theme, view mode |
+| `ui:write` | Toggle theme, change view |
+| `events:emit` | Emit custom events |
+| `events:subscribe` | Listen to events |
+| `extensions:define` | Define extension points |
+| `extensions:contribute` | Contribute to extension points |
+| `services:provide` | Provide services |
+| `services:consume` | Use services |
+| `storage:local` | Plugin-specific storage |
+
+### 3. Use `usePluginAPI()` for simple cases
+
+```typescript
+function MyPlugin() {
+  const api = usePluginAPI();
+  
+  const handleClick = () => {
+    api.setValue('root.title', 'Hello');
+    api.notify('Updated!', 'success');
+  };
+  
+  return (
+    <div>
+      <p>Selected: {api.selectedPath}</p>
+      <button onClick={handleClick}>Update</button>
+    </div>
+  );
+}
+```
+
+### 4. Use `usePluginContext()` for advanced cases
+
+```typescript
+function MyAdvancedPlugin() {
+  const ctx = usePluginContext();
+  
+  // Access extension points
+  const renderers = ctx.extensions?.getExtensions('tree-view.nodeRenderer');
+  
+  // Use services
+  const styles = ctx.services?.get<IStyleResolver>('style-resolver');
+  
+  return <div>...</div>;
+}
+```
+
+### 5. Every plugin must have lazy activation unless core functionality
+
+```typescript
+// Good - loads only when needed
+{
+  activation: 'lazy',
+  activationEvents: ['onSlot:sidebar:left'],
+}
+
+// Only use eager for critical plugins
+{
+  activation: 'eager', // Use sparingly
+}
+```
+
+## Common Patterns
+
+### Sidebar Panel Plugin
+
+```typescript
+export default definePlugin({
+  manifest: {
+    id: 'my-panel',
+    name: 'My Panel',
+    version: '1.0.0',
+    apiVersion: '1.0',
+    activation: 'lazy',
+    activationEvents: ['onSlot:sidebar:left'],
+    capabilities: ['document:read', 'selection:read'],
+    slots: [
+      { slot: 'sidebar:left', component: Panel, priority: 50 }
+    ],
+  },
+});
+```
+
+### Extension Contributor Plugin
+
+```typescript
+export default definePlugin({
+  manifest: {
+    id: 'custom-renderer',
+    name: 'Custom Renderer',
+    version: '1.0.0',
+    apiVersion: '1.0',
+    activation: 'lazy',
+    activationEvents: ['onExtensionPoint:tree-view.nodeRenderer'],
+    capabilities: ['extensions:contribute'],
+    extensions: [{
+      point: 'tree-view.nodeRenderer',
+      contribution: {
+        nodeType: 'gradient',
+        component: GradientRenderer,
+        priority: 100,
+      },
+    }],
+  },
+});
+```
+
+### Service Provider Plugin
+
+```typescript
+export default definePlugin({
+  manifest: {
+    id: 'style-service',
+    name: 'Style Service',
+    version: '1.0.0',
+    apiVersion: '1.0',
+    activation: 'eager',
+    capabilities: ['services:provide'],
+    provides: [{
+      id: 'style-resolver',
+      interface: 'IStyleResolver',
+      implementation: StyleResolverImpl,
+    }],
+  },
+});
+```
+
+### Event Emitter Plugin
+
+```typescript
+export default definePlugin({
+  manifest: {
+    id: 'drag-drop',
+    name: 'Drag Drop',
+    version: '1.0.0',
+    apiVersion: '1.0',
+    activation: 'lazy',
+    activationEvents: ['onSlot:main:view'],
+    capabilities: ['events:emit', 'events:subscribe'],
+    emits: ['drag:start', 'drag:end', 'drop'],
+    subscribes: ['selection:changed'],
+  },
+});
+```
+
+## Anti-Patterns to Avoid
+
+### ❌ Don't import from other plugins directly
+
+```typescript
+// BAD - breaks isolation
+import { TreeView } from '../tree-view/TreeView';
+
+// GOOD - use extension points or services
+const ctx = usePluginContext();
+const renderers = ctx.extensions?.getExtensions('tree-view.nodeRenderer');
+```
+
+### ❌ Don't use global state outside the plugin system
+
+```typescript
+// BAD - bypasses plugin boundaries
+window.myPluginState = { ... };
+const globalData = window.appData;
+
+// GOOD - use context or storage
+const api = usePluginAPI();
+api.storage?.set('myKey', value);
+```
+
+### ❌ Don't emit events not declared in manifest
+
+```typescript
+// BAD - undeclared event (blocked in strict mode)
+api.emit('my:secret:event', data);
+
+// GOOD - declare in manifest
+{
+  emits: ['my:event'],
+}
+api.emit('my:event', data);
+```
+
+### ❌ Don't access capabilities you didn't request
+
+```typescript
+// BAD - accessing actions without document:write
+const ctx = usePluginContext();
+ctx.actions?.updateValue(path, value); // Will be undefined
+
+// GOOD - request capability
+{
+  capabilities: ['document:write'],
+}
+```
+
+### ❌ Don't block the main thread
+
+```typescript
+// BAD - synchronous heavy operation
+function MyPlugin() {
+  const result = heavyComputation(); // Blocks render
+  return <div>{result}</div>;
+}
+
+// GOOD - use async or web workers
+function MyPlugin() {
+  const [result, setResult] = useState(null);
+  useEffect(() => {
+    computeAsync().then(setResult);
+  }, []);
+  return <div>{result}</div>;
+}
+```
+
+## Testing Plugins
+
+Use the test harness for isolated testing:
+
+```typescript
+import { renderPlugin, createMockContext } from '@/core/testing';
+
+test('updates on click', () => {
+  const ctx = createMockContext({
+    document: { data: { title: 'Old' } },
+    capabilities: ['document:read', 'document:write'],
+  });
+  
+  const { getByText } = renderPlugin(MyPlugin, ctx);
+  fireEvent.click(getByText('Update'));
+  
+  expect(ctx.actions.setValue).toHaveBeenCalledWith('root.title', 'New');
+});
+```
+
+## Plugin Manifest Schema
+
+```typescript
+interface PluginManifest {
+  // Required
+  id: string;              // lowercase-with-hyphens
+  name: string;            // Display name
+  version: string;         // Semver (1.0.0)
+  apiVersion: '1.0';       // API compatibility
+  activation: 'eager' | 'lazy';
+  capabilities: PluginCapability[];
+  
+  // Optional
+  description?: string;
+  requires?: PluginDependency[];
+  activationEvents?: ActivationEvent[];
+  slots?: SlotRegistration[];
+  extensionPoints?: ExtensionPointDeclaration[];
+  extensions?: ExtensionContribution[];
+  provides?: ServiceDeclaration[];
+  consumes?: string[];
+  emits?: string[];
+  subscribes?: string[];
+  shortcuts?: ShortcutRegistration[];
+}
+```
+
+## UI Slots
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ [header:left]     [header:center]              [header:right]   │
+├─────────────┬───────────────────────────┬───────────────────────┤
+│             │                           │                       │
+│ [sidebar:   │      [main:view]          │    [sidebar:right]    │
+│   left]     │                           │                       │
+│             │                           │                       │
+├─────────────┴───────────────────────────┴───────────────────────┤
+│                      [panel:bottom]                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Documentation
+
+Before creating a plugin, reference:
+- `docs/guides/plugin-development.md` - Full development guide
+- `docs/reference/api/simple-api.md` - SimpleAPI reference
+- `docs/reference/extension-points.md` - Available extension points
+- `docs/reference/services.md` - Available services
+
+## Validation
+
+Run `npm run validate-plugin plugins/my-plugin` to check:
+- Manifest schema validity
+- Capability usage matches declarations
+- Extension point contributions match schemas
+- No forbidden imports

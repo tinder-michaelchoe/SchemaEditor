@@ -1,0 +1,145 @@
+{
+  "id": "settings-check",
+  "version": "1.0",
+  "root": {
+    "children": [
+      {
+        "type": "sectionLayout",
+        "sections": [
+          {
+            "id": "header-section",
+            "layout": {
+              "type": "list"
+            },
+            "children": [
+              {
+                "type": "vstack",
+                "spacing": 12,
+                "padding": {
+                  "horizontal": 16,
+                  "vertical": 16
+                },
+                "children": [
+                  {
+                    "type": "image",
+                    "image": {
+                      "sfsymbol": "xmark"
+                    }
+                  },
+                  {
+                    "type": "label",
+                    "text": "Time to check your settings"
+                  },
+                  {
+                    "type": "label",
+                    "text": "It's been a while since you reviewed your discovery settings. Take a look and update anything that's changed."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "settings-section",
+            "layout": {
+              "type": "list",
+              "itemSpacing": 16
+            },
+            "children": [
+              {
+                "type": "hstack",
+                "spacing": 8,
+                "children": [
+                  {
+                    "type": "image",
+                    "image": {
+                      "sfsymbol": "person"
+                    }
+                  },
+                  {
+                    "type": "vstack",
+                    "children": [
+                      {
+                        "type": "label",
+                        "text": "Interested In"
+                      },
+                      {
+                        "type": "label",
+                        "text": "Women, Beyond Binary"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "hstack",
+                "spacing": 8,
+                "children": [
+                  {
+                    "type": "image",
+                    "image": {
+                      "sfsymbol": "location"
+                    }
+                  },
+                  {
+                    "type": "vstack",
+                    "children": [
+                      {
+                        "type": "label",
+                        "text": "Distance"
+                      },
+                      {
+                        "type": "label",
+                        "text": "48 miles"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "hstack",
+                "spacing": 8,
+                "children": [
+                  {
+                    "type": "image",
+                    "image": {
+                      "sfsymbol": "calendar"
+                    }
+                  },
+                  {
+                    "type": "vstack",
+                    "children": [
+                      {
+                        "type": "label",
+                        "text": "Age Range"
+                      },
+                      {
+                        "type": "label",
+                        "text": "25-33"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "button-section",
+            "layout": {
+              "type": "list"
+            },
+            "children": [
+              {
+                "type": "button",
+                "text": "Looks good!",
+                "padding": {
+                  "horizontal": 16,
+                  "vertical": 16
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
