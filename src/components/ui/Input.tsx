@@ -1,61 +1,59 @@
-import { InputHTMLAttributes, forwardRef } from 'react';
+import { InputHTMLAttributes, TextareaHTMLAttributes, forwardRef } from 'react';
+import styled, { css } from 'styled-components';
+import { disabledStyles } from '@/styles/mixins';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className = '', error, ...props }, ref) => {
-    return (
-      <input
-        ref={ref}
-        className={`
-          w-full px-3 py-1.5 text-sm
-          bg-[var(--bg-primary)] text-[var(--text-primary)]
-          border rounded-lg
-          placeholder:text-[var(--text-tertiary)]
-          focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${error 
-            ? 'border-[var(--error-color)] focus:ring-[var(--error-color)]' 
-            : 'border-[var(--border-color)]'
-          }
-          ${className}
-        `}
-        {...props}
-      />
-    );
+const baseInputStyles = css<{ $error?: boolean }>`
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  color: ${p => p.theme.colors.textPrimary};
+  border: 1px solid ${p => (p.$error ? p.theme.colors.error : p.theme.colors.border)};
+  border-radius: ${p => p.theme.radii.lg};
+
+  &::placeholder {
+    color: ${p => p.theme.colors.textTertiary};
   }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px ${p => (p.$error ? p.theme.colors.error : p.theme.colors.accent)};
+    border-color: transparent;
+  }
+
+  ${disabledStyles}
+`;
+
+const StyledInput = styled.input<{ $error?: boolean }>`
+  ${baseInputStyles}
+`;
+
+const StyledTextArea = styled.textarea<{ $error?: boolean }>`
+  ${baseInputStyles}
+  padding: 0.5rem 0.75rem;
+  resize: none;
+`;
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ error, ...props }, ref) => (
+    <StyledInput ref={ref} $error={error} {...props} />
+  ),
 );
 
 Input.displayName = 'Input';
 
-interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: boolean;
 }
 
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ className = '', error, ...props }, ref) => {
-    return (
-      <textarea
-        ref={ref}
-        className={`
-          w-full px-3 py-2 text-sm
-          bg-[var(--bg-primary)] text-[var(--text-primary)]
-          border rounded-lg resize-none
-          placeholder:text-[var(--text-tertiary)]
-          focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${error 
-            ? 'border-[var(--error-color)] focus:ring-[var(--error-color)]' 
-            : 'border-[var(--border-color)]'
-          }
-          ${className}
-        `}
-        {...props}
-      />
-    );
-  }
+  ({ error, ...props }, ref) => (
+    <StyledTextArea ref={ref} $error={error} {...props} />
+  ),
 );
 
 TextArea.displayName = 'TextArea';

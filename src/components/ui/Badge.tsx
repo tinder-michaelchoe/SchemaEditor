@@ -1,30 +1,52 @@
 import { ReactNode } from 'react';
+import styled, { css } from 'styled-components';
 
 interface BadgeProps {
   variant?: 'default' | 'required' | 'type' | 'error' | 'success';
   children: ReactNode;
-  className?: string;
 }
 
-export function Badge({ variant = 'default', children, className = '' }: BadgeProps) {
-  const variants = {
-    default: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]',
-    required: 'bg-[var(--accent-color)] text-white',
-    type: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] font-mono',
-    error: 'bg-[var(--error-color)] text-white',
-    success: 'bg-[var(--success-color)] text-white',
-  };
+const StyledBadge = styled.span<{ $variant: string }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.375rem;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 0.25rem;
 
-  return (
-    <span
-      className={`
-        inline-flex items-center px-1.5 py-0.5 
-        text-[10px] font-medium rounded
-        ${variants[variant]}
-        ${className}
-      `}
-    >
-      {children}
-    </span>
-  );
+  ${p =>
+    p.$variant === 'default' &&
+    css`
+      background: ${p.theme.colors.bgTertiary};
+      color: ${p.theme.colors.textSecondary};
+    `}
+  ${p =>
+    p.$variant === 'required' &&
+    css`
+      background: ${p.theme.colors.accent};
+      color: white;
+    `}
+  ${p =>
+    p.$variant === 'type' &&
+    css`
+      background: ${p.theme.colors.bgTertiary};
+      color: ${p.theme.colors.textSecondary};
+      font-family: ${p.theme.fonts.mono};
+    `}
+  ${p =>
+    p.$variant === 'error' &&
+    css`
+      background: ${p.theme.colors.error};
+      color: white;
+    `}
+  ${p =>
+    p.$variant === 'success' &&
+    css`
+      background: ${p.theme.colors.success};
+      color: white;
+    `}
+`;
+
+export function Badge({ variant = 'default', children }: BadgeProps) {
+  return <StyledBadge $variant={variant}>{children}</StyledBadge>;
 }

@@ -1,5 +1,7 @@
 import { ReactNode, useEffect, useRef } from 'react';
 import { ChevronRight } from 'lucide-react';
+import styled, { css } from 'styled-components';
+import { truncateText } from '@/styles/mixins';
 
 interface CollapsibleProps {
   isOpen: boolean;
@@ -12,9 +14,94 @@ interface CollapsibleProps {
   badge?: ReactNode;
   error?: boolean;
   children: ReactNode;
-  className?: string;
   actions?: ReactNode;
 }
+
+const Wrapper = styled.div<{ $isSelected?: boolean }>`
+  border: 1px solid ${p => (p.$isSelected ? p.theme.colors.accent : p.theme.colors.border)};
+  border-radius: ${p => p.theme.radii.lg};
+  overflow: hidden;
+  transition: all 0.15s;
+  ${p =>
+    p.$isSelected &&
+    css`
+      box-shadow: 0 0 0 2px ${p.theme.colors.accent}30;
+    `}
+`;
+
+const HeaderRow = styled.div<{ $isSelected?: boolean; $hasError?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: background-color 0.15s;
+
+  ${p =>
+    p.$isSelected
+      ? css`background: ${p.theme.colors.accent}1a;`
+      : css`
+          background: ${p.theme.colors.bgSecondary};
+          &:hover { background: ${p.theme.colors.bgTertiary}; }
+        `}
+
+  ${p =>
+    p.$hasError &&
+    css`
+      border-left: 2px solid ${p.theme.colors.error};
+    `}
+`;
+
+const ClickArea = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  cursor: pointer;
+`;
+
+const ChevronIcon = styled(ChevronRight)<{ $isOpen?: boolean }>`
+  color: ${p => p.theme.colors.textSecondary};
+  transition: transform 0.15s;
+  flex-shrink: 0;
+  transform: rotate(${p => (p.$isOpen ? '90deg' : '0deg')});
+`;
+
+const TitleArea = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const TitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const TitleText = styled.span`
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textPrimary};
+  ${truncateText}
+`;
+
+const Subtitle = styled.span`
+  display: block;
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textSecondary};
+  ${truncateText}
+`;
+
+const Actions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+`;
+
+const ChildrenWrapper = styled.div`
+  border-top: 1px solid ${p => p.theme.colors.border};
+`;
 
 export function Collapsible({
   isOpen,
@@ -27,12 +114,10 @@ export function Collapsible({
   badge,
   error,
   children,
-  className = '',
   actions,
 }: CollapsibleProps) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll into view when selected
   useEffect(() => {
     if (isSelected && ref.current) {
       ref.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -45,73 +130,31 @@ export function Collapsible({
   };
 
   return (
-    <div 
-      ref={ref}
-      id={nodeId}
-      className={`
-        border rounded-lg overflow-hidden transition-all
-        ${isSelected 
-          ? 'border-[var(--accent-color)] ring-2 ring-[var(--accent-color)]/30' 
-          : 'border-[var(--border-color)]'
-        }
-        ${className}
-      `}
-    >
-      {/* Header row - contains clickable area and actions */}
-      <div
-        className={`
-          flex items-center gap-2 px-3 py-2
-          transition-colors
-          ${isSelected 
-            ? 'bg-[var(--accent-color)]/10' 
-            : 'bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)]'
-          }
-          ${error ? 'border-l-2 border-l-[var(--error-color)]' : ''}
-        `}
-      >
-        {/* Clickable toggle/select area */}
-        <div
+    <Wrapper ref={ref} id={nodeId} $isSelected={isSelected}>
+      <HeaderRow $isSelected={isSelected} $hasError={error}>
+        <ClickArea
           role="button"
           tabIndex={0}
           onClick={handleClick}
-          onKeyDown={(e) => {
+          onKeyDown={e => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               handleClick();
             }
           }}
-          className="flex-1 flex items-center gap-2 min-w-0 cursor-pointer"
         >
-          <ChevronRight 
-            className={`w-4 h-4 text-[var(--text-secondary)] transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`} 
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-sm text-[var(--text-primary)] truncate">
-                {title}
-              </span>
+          <ChevronIcon size={16} $isOpen={isOpen} />
+          <TitleArea>
+            <TitleRow>
+              <TitleText>{title}</TitleText>
               {badge}
-            </div>
-            {subtitle && (
-              <span className="text-xs text-[var(--text-secondary)] truncate block">
-                {subtitle}
-              </span>
-            )}
-          </div>
-        </div>
-        {/* Actions - outside the clickable area to avoid nested buttons */}
-        {actions && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {actions}
-          </div>
-        )}
-      </div>
-      
-      {isOpen && (
-        <div className="border-t border-[var(--border-color)]">
-          {children}
-        </div>
-      )}
-    </div>
+            </TitleRow>
+            {subtitle && <Subtitle>{subtitle}</Subtitle>}
+          </TitleArea>
+        </ClickArea>
+        {actions && <Actions>{actions}</Actions>}
+      </HeaderRow>
+      {isOpen && <ChildrenWrapper>{children}</ChildrenWrapper>}
+    </Wrapper>
   );
 }

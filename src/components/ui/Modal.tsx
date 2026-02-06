@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { X } from 'lucide-react';
+import styled, { css } from 'styled-components';
 import { Button } from './Button';
 
 interface ModalProps {
@@ -11,18 +12,91 @@ interface ModalProps {
   size?: 'default' | 'large' | 'fullscreen';
 }
 
+const Overlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Backdrop = styled.div`
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+`;
+
+const ModalBox = styled.div<{ $size: 'default' | 'large' | 'fullscreen' }>`
+  position: relative;
+  width: 100%;
+  margin: 0 1rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  border-radius: 0.75rem;
+  box-shadow: ${p => p.theme.shadows.xl};
+  border: 1px solid ${p => p.theme.colors.border};
+  overflow: hidden;
+
+  ${p =>
+    p.$size === 'fullscreen' &&
+    css`
+      max-width: 95vw;
+      height: 90vh;
+    `}
+  ${p =>
+    p.$size === 'large' &&
+    css`
+      max-width: 56rem;
+    `}
+  ${p =>
+    p.$size === 'default' &&
+    css`
+      max-width: 32rem;
+    `}
+`;
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+`;
+
+const Title = styled.h2`
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: ${p => p.theme.colors.textPrimary};
+  margin: 0;
+`;
+
+const Content = styled.div<{ $scrollable?: boolean }>`
+  padding: 1rem;
+  ${p => p.$scrollable && css`overflow: auto;`}
+`;
+
+const Footer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgSecondary};
+`;
+
 export function Modal({ isOpen, onClose, title, children, footer, size = 'default' }: ModalProps) {
-  // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    
+
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
@@ -32,41 +106,18 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'defaul
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className={`
-        relative w-full mx-4 bg-[var(--bg-primary)] rounded-xl shadow-2xl border border-[var(--border-color)] overflow-hidden
-        ${size === 'fullscreen' ? 'max-w-[95vw] h-[90vh]' :
-          size === 'large' ? 'max-w-4xl' : 'max-w-lg'}
-      `}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)]">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-            {title}
-          </h2>
+    <Overlay>
+      <Backdrop onClick={onClose} />
+      <ModalBox $size={size}>
+        <Header>
+          <Title>{title}</Title>
           <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="w-4 h-4" />
+            <X size={16} />
           </Button>
-        </div>
-        
-        {/* Content */}
-        <div className={`p-4 ${size === 'fullscreen' ? 'overflow-auto' : ''}`}>
-          {children}
-        </div>
-        
-        {/* Footer */}
-        {footer && (
-          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--border-color)] bg-[var(--bg-secondary)]">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
+        </Header>
+        <Content $scrollable={size === 'fullscreen'}>{children}</Content>
+        {footer && <Footer>{footer}</Footer>}
+      </ModalBox>
+    </Overlay>
   );
 }
