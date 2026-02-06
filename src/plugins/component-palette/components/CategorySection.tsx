@@ -1,7 +1,55 @@
 import React, { useState } from 'react';
+import styled from 'styled-components';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { ComponentCard } from './ComponentCard';
 import type { ComponentDefinition } from '../data/componentDefinitions';
+
+const SectionWrapper = styled.div`
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+
+  &:last-child {
+    border-bottom: 0;
+  }
+`;
+
+const ToggleButton = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  transition: background-color 150ms;
+  color: inherit;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+`;
+
+const ToggleIconWrapper = styled.span`
+  display: flex;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const CategoryName = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const ComponentCount = styled.span`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+  margin-left: auto;
+`;
+
+const ComponentList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 0.5rem 0.5rem;
+`;
 
 interface CategorySectionProps {
   name: string;
@@ -21,30 +69,17 @@ export function CategorySection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-[var(--border-color)] last:border-b-0">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="
-          w-full flex items-center gap-2 px-3 py-2
-          text-left hover:bg-[var(--bg-tertiary)]
-          transition-colors duration-150
-        "
-      >
-        {isOpen ? (
-          <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
-        )}
-        <span className="text-sm font-medium text-[var(--text-primary)]">
-          {name}
-        </span>
-        <span className="text-xs text-[var(--text-tertiary)] ml-auto">
-          {components.length}
-        </span>
-      </button>
+    <SectionWrapper>
+      <ToggleButton onClick={() => setIsOpen(!isOpen)}>
+        <ToggleIconWrapper>
+          {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </ToggleIconWrapper>
+        <CategoryName>{name}</CategoryName>
+        <ComponentCount>{components.length}</ComponentCount>
+      </ToggleButton>
 
       {isOpen && (
-        <div className="px-2 pb-2 space-y-1">
+        <ComponentList>
           {components.map((component) => (
             <ComponentCard
               key={component.type}
@@ -52,8 +87,8 @@ export function CategorySection({
               onClick={() => onComponentClick?.(component)}
             />
           ))}
-        </div>
+        </ComponentList>
       )}
-    </div>
+    </SectionWrapper>
   );
 }

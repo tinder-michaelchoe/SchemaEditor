@@ -5,9 +5,34 @@
  */
 
 import React from 'react';
+import styled from 'styled-components';
 import { usePluginContext } from '../../../core/hooks/usePluginContext';
 import { useDocumentStore } from '../../../core/store/documentStore';
 import { DevicePreview } from '../../../components/Preview/DevicePreview';
+
+const PanelWrapper = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+`;
+
+const PanelHeader = styled.div`
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgSecondary};
+`;
+
+const HeaderTitle = styled.h3`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  overflow: hidden;
+`;
 
 export function PreviewPanel() {
   const ctx = usePluginContext();
@@ -19,14 +44,14 @@ export function PreviewPanel() {
   }, [data, ctx]);
   
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 px-4 py-2 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-        <h3 className="text-sm font-medium text-[var(--text-primary)]">Device Preview</h3>
-      </div>
-      <div className="flex-1 overflow-hidden">
+    <PanelWrapper>
+      <PanelHeader>
+        <HeaderTitle>Device Preview</HeaderTitle>
+      </PanelHeader>
+      <ContentArea>
         <DevicePreview data={data} className="h-full" />
-      </div>
-    </div>
+      </ContentArea>
+    </PanelWrapper>
   );
 }
 

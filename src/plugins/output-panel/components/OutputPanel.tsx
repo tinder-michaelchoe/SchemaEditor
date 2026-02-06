@@ -1,10 +1,122 @@
 import React, { useCallback, useMemo } from 'react';
+import styled, { css } from 'styled-components';
 import { Monitor, Code, ChevronDown, ChevronRight, RotateCcw, WrapText } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { DevicePreview } from '@/components/Preview/DevicePreview';
 import { RawJSONPreview } from '@/components/Preview/RawJSONPreview';
 import { Button } from '@/components/ui/Button';
 import { usePersistentUIStore } from '@/plugins/app-shell/hooks/usePersistence';
+
+const PanelContainer = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: ${p => p.theme.colors.bgSecondary};
+`;
+
+const TabHeader = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgTertiary};
+`;
+
+const TabGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: ${p => p.theme.colors.bgSecondary};
+  border-radius: ${p => p.theme.radii.lg};
+  padding: 0.25rem;
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 1rem;
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-weight: 500;
+  border-radius: ${p => p.theme.radii.md};
+  border: none;
+  cursor: pointer;
+  transition: all 200ms;
+
+  ${p => p.$active
+    ? css`
+        background: ${p.theme.colors.bgPrimary};
+        color: ${p.theme.colors.textPrimary};
+        box-shadow: ${p.theme.shadows.sm};
+      `
+    : css`
+        background: transparent;
+        color: ${p.theme.colors.textSecondary};
+        &:hover {
+          color: ${p.theme.colors.textPrimary};
+          background: ${p.theme.colors.bgTertiary};
+        }
+      `
+  }
+`;
+
+const RightButtons = styled.div`
+  position: absolute;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+`;
+
+const BottomToolbar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.375rem 0.75rem;
+  border-top: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgTertiary};
+`;
+
+const ToolbarGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const WrapToggle = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: ${p => p.theme.radii.sm};
+  font-size: ${p => p.theme.fontSizes.xs};
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 150ms;
+
+  ${p => p.$active
+    ? css`
+        background: color-mix(in srgb, ${p.theme.colors.accent} 20%, transparent);
+        color: ${p.theme.colors.accent};
+      `
+    : css`
+        background: transparent;
+        color: ${p.theme.colors.textSecondary};
+        &:hover {
+          background: ${p.theme.colors.bgSecondary};
+        }
+      `
+  }
+`;
 
 type TabId = 'preview' | 'json';
 
@@ -85,52 +197,45 @@ export function OutputPanel() {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-[var(--bg-secondary)]">
+    <PanelContainer>
       {/* Tab Header - Centered with improved styling */}
-      <div className="relative flex items-center justify-center px-3 py-2 border-b border-[var(--border-color)] bg-[var(--bg-tertiary)]">
+      <TabHeader>
         {/* Centered Tab Buttons */}
-        <div className="flex items-center gap-1 bg-[var(--bg-secondary)] rounded-lg p-1">
+        <TabGroup>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
-              <button
+              <TabButton
                 key={tab.id}
+                $active={activeTab === tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`
-                  flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md
-                  transition-all duration-200
-                  ${activeTab === tab.id
-                    ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
-                  }
-                `}
               >
-                <Icon className="w-4 h-4" />
+                <Icon size={16} />
                 {tab.label}
-              </button>
+              </TabButton>
             );
           })}
-        </div>
+        </TabGroup>
 
         {/* Right-side buttons - positioned on the right */}
         {activeTab === 'json' && (
-          <div className="absolute right-3 flex items-center gap-1">
+          <RightButtons>
             {/* Expand/Collapse/Reset buttons - only visible for JSON tab */}
             <Button variant="ghost" size="sm" onClick={expandAll} title="Expand All">
-              <ChevronDown className="w-3 h-3" />
+              <ChevronDown size={12} />
             </Button>
             <Button variant="ghost" size="sm" onClick={collapseAll} title="Collapse All">
-              <ChevronRight className="w-3 h-3" />
+              <ChevronRight size={12} />
             </Button>
             <Button variant="ghost" size="sm" onClick={resetData} title="Reset">
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw size={12} />
             </Button>
-          </div>
+          </RightButtons>
         )}
-      </div>
+      </TabHeader>
 
       {/* Tab Content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <ContentArea>
         {activeTab === 'preview' ? (
           <DevicePreview data={data} className="h-full" />
         ) : (
@@ -143,29 +248,23 @@ export function OutputPanel() {
             className="h-full"
           />
         )}
-      </div>
+      </ContentArea>
 
       {/* Bottom Toolbar - only visible for JSON tab */}
       {activeTab === 'json' && (
-        <div className="flex items-center justify-between px-3 py-1.5 border-t border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setIsJsonWrapEnabled(!isJsonWrapEnabled)} 
+        <BottomToolbar>
+          <ToolbarGroup>
+            <WrapToggle
+              $active={isJsonWrapEnabled}
+              onClick={() => setIsJsonWrapEnabled(!isJsonWrapEnabled)}
               title={isJsonWrapEnabled ? 'Disable text wrapping' : 'Enable text wrapping'}
-              className={`
-                flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-all
-                ${isJsonWrapEnabled 
-                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400' 
-                  : 'bg-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }
-              `}
             >
-              <WrapText className="w-3.5 h-3.5" />
+              <WrapText size={14} />
               <span>Wrap</span>
-            </button>
-          </div>
-        </div>
+            </WrapToggle>
+          </ToolbarGroup>
+        </BottomToolbar>
       )}
-    </div>
+    </PanelContainer>
   );
 }

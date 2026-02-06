@@ -1,5 +1,36 @@
 import React from 'react';
+import styled from 'styled-components';
 import { useDragDropStore } from './DragDropManager';
+
+const FloatingContainer = styled.div`
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+`;
+
+const PreviewCard = styled.div`
+  padding: 0.5rem 0.75rem;
+  border-radius: ${p => p.theme.radii.lg};
+  box-shadow: ${p => p.theme.shadows.lg};
+  background: ${p => p.theme.colors.bgPrimary};
+  border-width: 2px;
+  border-style: solid;
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+  opacity: 0.95;
+  backdrop-filter: blur(4px);
+`;
+
+const PreviewRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const IconSpan = styled.span`
+  font-size: 1rem;
+`;
 
 interface DragPreviewProps {
   /**
@@ -27,8 +58,7 @@ export function DragPreview({ renderPreview }: DragPreviewProps) {
   const offsetY = 12;
   
   return (
-    <div
-      className="fixed pointer-events-none z-[9999]"
+    <FloatingContainer
       style={{
         left: currentPosition.x + offsetX,
         top: currentPosition.y + offsetY,
@@ -44,7 +74,7 @@ export function DragPreview({ renderPreview }: DragPreviewProps) {
         // Default preview
         <DefaultDragPreview type={source.type} data={source.data} />
       )}
-    </div>
+    </FloatingContainer>
   );
 }
 
@@ -137,19 +167,12 @@ function DefaultDragPreview({ type, data }: DefaultDragPreviewProps) {
   const { icon, label, color } = getPreviewContent();
 
   return (
-    <div className="
-      px-3 py-2 rounded-lg shadow-lg
-      bg-[var(--bg-primary)] border-2
-      text-sm font-medium text-[var(--text-primary)]
-      opacity-95 backdrop-blur-sm
-    "
-      style={{ borderColor: color }}
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-base">{icon}</span>
+    <PreviewCard style={{ borderColor: color }}>
+      <PreviewRow>
+        <IconSpan>{icon}</IconSpan>
         <span>{label}</span>
-      </div>
-    </div>
+      </PreviewRow>
+    </PreviewCard>
   );
 }
 

@@ -1,5 +1,10 @@
 import React, { useCallback, useState } from 'react';
+import styled from 'styled-components';
 import { LayerItem } from './LayerItem';
+
+const TreeWrapper = styled.div``;
+
+const NodeGroup = styled.div``;
 
 interface LayerTreeProps {
   nodes: Record<string, unknown>[];
@@ -101,7 +106,7 @@ function SectionList({
   onReorder,
 }: Omit<LayerTreeProps, 'nodes'> & { sections: Record<string, unknown>[] }) {
   return (
-    <div className="section-list">
+    <TreeWrapper>
       {sections.map((section, sectionIndex) => {
         const sectionPath = `${basePath}[${sectionIndex}]`;
         const sectionId = (section.id as string) || `Section ${sectionIndex + 1}`;
@@ -120,7 +125,7 @@ function SectionList({
         };
 
         return (
-          <div key={sectionPath} className="group">
+          <NodeGroup key={sectionPath}>
             <LayerItem
               node={sectionNode}
               path={sectionPath}
@@ -138,7 +143,7 @@ function SectionList({
 
             {/* Render section content if expanded */}
             {isExpanded && hasContent && (
-              <div className="section-content">
+              <div>
                 {/* Render header if present */}
                 {header && (
                   <SingleNodeRenderer
@@ -191,10 +196,10 @@ function SectionList({
                 )}
               </div>
             )}
-          </div>
+          </NodeGroup>
         );
       })}
-    </div>
+    </TreeWrapper>
   );
 }
 
@@ -212,7 +217,7 @@ export function LayerTree({
   onReorder,
 }: LayerTreeProps) {
   return (
-    <div className="layer-tree">
+    <TreeWrapper>
       {nodes.map((node, index) => {
         const nodePath = `${basePath}[${index}]`;
         const nodeType = (node.type as string) || 'unknown';
@@ -227,7 +232,7 @@ export function LayerTree({
         const isSelected = selectedPath === nodePath;
 
         return (
-          <div key={nodePath} className="group">
+          <NodeGroup key={nodePath}>
             <LayerItem
               node={node}
               path={nodePath}
@@ -276,9 +281,9 @@ export function LayerTree({
                 onReorder={onReorder}
               />
             )}
-          </div>
+          </NodeGroup>
         );
       })}
-    </div>
+    </TreeWrapper>
   );
 }

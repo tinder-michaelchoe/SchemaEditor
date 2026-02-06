@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import styled, { css } from 'styled-components';
 import { useDragSource } from '../../drag-drop-service/useDragDrop';
 import {
   COMPONENT_CATEGORIES,
@@ -13,6 +14,209 @@ import {
   type ComponentDefinition,
 } from '../data/componentDefinitions';
 import { ChevronDown, Hand, MousePointer } from 'lucide-react';
+
+/* ── Outer layout ── */
+
+const PaletteRoot = styled.div`
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  pointer-events: none;
+`;
+
+const PaletteRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+/* ── Shared island chrome ── */
+
+const Island = styled.div`
+  position: relative;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  border-radius: 1rem;
+  box-shadow: ${p => p.theme.shadows.lg};
+  border: 1px solid ${p => p.theme.colors.border};
+  padding: 0.5rem;
+  pointer-events: auto;
+`;
+
+/* ── Flyout menu (shared by tools & categories) ── */
+
+const FlyoutMenu = styled.div`
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  border-radius: 0.75rem;
+  box-shadow: ${p => p.theme.shadows.xl};
+  border: 1px solid ${p => p.theme.colors.border};
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const FlyoutLabel = styled.div`
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: ${p => p.theme.colors.textTertiary};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+`;
+
+/* ── Tool / category button strip ── */
+
+const ButtonStrip = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+`;
+
+const ToolButtonWrapper = styled.div<{ $isHighlighted: boolean; $isOpen: boolean }>`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  border-radius: ${p => p.theme.radii.lg};
+  transition: all 150ms;
+
+  ${p => p.$isHighlighted
+    ? css`
+        background: ${p.theme.colors.accent};
+        color: #ffffff;
+      `
+    : css`
+        background: transparent;
+        color: ${p.theme.colors.textPrimary};
+        &:hover { background: ${p.theme.colors.bgTertiary}; }
+      `
+  }
+
+  ${p => p.$isOpen && !p.$isHighlighted && css`
+    background: ${p.theme.colors.bgTertiary};
+  `}
+`;
+
+const IconCenter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const ChevronButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.125rem;
+  margin-right: -0.25rem;
+  transition: opacity 150ms;
+
+  &:hover { opacity: 0.7; }
+`;
+
+/* ── Flyout menu item (tool or component) ── */
+
+const FlyoutToolMenuItem = styled.div`
+  min-width: 180px;
+`;
+
+const FlyoutMenuItem = styled.button<{ $isSelected: boolean; $isDragging: boolean }>`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: ${p => p.theme.radii.lg};
+  color: ${p => p.theme.colors.textPrimary};
+  transition: all 150ms;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+
+  ${p => p.$isSelected && css`
+    background: ${p.theme.colors.bgTertiary};
+  `}
+
+  ${p => p.$isDragging
+    ? css`
+        opacity: 0.5;
+        cursor: grabbing;
+      `
+    : css`
+        cursor: grab;
+      `
+  }
+`;
+
+const FlyoutMenuItemIcon = styled.span`
+  display: flex;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const FlyoutMenuItemLabel = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+`;
+
+/* ── Category main button ── */
+
+const CategoryButtonWrapper = styled.div`
+  position: relative;
+`;
+
+const CategoryMainButton = styled.div<{ $isExpanded: boolean }>`
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  border-radius: ${p => p.theme.radii.lg};
+  background: transparent;
+  color: ${p => p.theme.colors.textPrimary};
+  transition: all 150ms;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+
+  ${p => p.$isExpanded && css`
+    background: ${p.theme.colors.bgTertiary};
+  `}
+`;
+
+/* ── Component icon (draggable) ── */
+
+const DraggableIcon = styled.div<{ $isDragging: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: ${p => p.theme.colors.textPrimary};
+
+  ${p => p.$isDragging && css`
+    opacity: 0.5;
+    cursor: grabbing;
+  `}
+`;
+
+const FlyoutComponentMenu = styled.div`
+  min-width: 200px;
+`;
 
 type Tool = 'select' | 'hand';
 
@@ -113,7 +317,7 @@ export function FloatingPalette({ onComponentSelect }: FloatingPaletteProps) {
     const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       // Check if clicking on a component in a flyout menu
-      const flyoutMenu = target.closest('.flyout-menu');
+      const flyoutMenu = target.closest('[data-flyout-menu]');
       if (flyoutMenu && paletteRef.current?.contains(flyoutMenu)) {
         dragStartPos = { x: e.clientX, y: e.clientY };
         isDraggingFromFlyout = true;
@@ -156,97 +360,68 @@ export function FloatingPalette({ onComponentSelect }: FloatingPaletteProps) {
   const isToolHighlighted = isSpacePressed;
 
   return (
-    <div ref={paletteRef} className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
-      <div className="flex items-center gap-4">
+    <PaletteRoot ref={paletteRef}>
+      <PaletteRow>
         {/* Tool Selection Island */}
-        <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 px-2 py-2 pointer-events-auto">
+        <Island>
           {/* Tool Menu Flyout */}
           {isToolMenuOpen && (
-            <div
-              className="
-                flyout-menu
-                absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-                bg-white/95 backdrop-blur-sm rounded-xl shadow-xl
-                border border-gray-200/50
-                p-2 space-y-1
-                min-w-[180px]
-              "
-            >
-              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Tools
-              </div>
-              <button
-                onClick={() => {
-                  setSelectedTool('select');
-                  closeToolMenu();
-                }}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2 rounded-lg
-                  text-gray-700 hover:bg-gray-100
-                  transition-all duration-150
-                  ${selectedTool === 'select' ? 'bg-gray-100' : ''}
-                `}
-              >
-                <MousePointer className="w-4 h-4 text-gray-600" />
-                <span className="text-sm font-medium">Selection (V)</span>
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedTool('hand');
-                  closeToolMenu();
-                }}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2 rounded-lg
-                  text-gray-700 hover:bg-gray-100
-                  transition-all duration-150
-                  ${selectedTool === 'hand' ? 'bg-gray-100' : ''}
-                `}
-              >
-                <Hand className="w-4 h-4 text-gray-600" />
-                <span className="text-sm font-medium">Hand (H)</span>
-              </button>
-            </div>
+            <FlyoutMenu data-flyout-menu>
+              <FlyoutToolMenuItem>
+                <FlyoutLabel>Tools</FlyoutLabel>
+                <FlyoutMenuItem
+                  $isSelected={selectedTool === 'select'}
+                  $isDragging={false}
+                  onClick={() => {
+                    setSelectedTool('select');
+                    closeToolMenu();
+                  }}
+                >
+                  <FlyoutMenuItemIcon><MousePointer size={16} /></FlyoutMenuItemIcon>
+                  <FlyoutMenuItemLabel>Selection (V)</FlyoutMenuItemLabel>
+                </FlyoutMenuItem>
+                <FlyoutMenuItem
+                  $isSelected={selectedTool === 'hand'}
+                  $isDragging={false}
+                  onClick={() => {
+                    setSelectedTool('hand');
+                    closeToolMenu();
+                  }}
+                >
+                  <FlyoutMenuItemIcon><Hand size={16} /></FlyoutMenuItemIcon>
+                  <FlyoutMenuItemLabel>Hand (H)</FlyoutMenuItemLabel>
+                </FlyoutMenuItem>
+              </FlyoutToolMenuItem>
+            </FlyoutMenu>
           )}
 
           {/* Tool Button */}
-          <div
-            className={`
-              relative flex items-center justify-center gap-1
-              h-10 px-3 rounded-lg
-              transition-all duration-150
-              ${isToolHighlighted
-                ? 'bg-blue-500 text-white'
-                : 'bg-transparent text-gray-700 hover:bg-gray-100'
-              }
-              ${isToolMenuOpen && !isToolHighlighted ? 'bg-gray-100' : ''}
-            `}
-          >
+          <ToolButtonWrapper $isHighlighted={isToolHighlighted} $isOpen={isToolMenuOpen}>
             {/* Tool Icon */}
-            <div className="flex items-center justify-center">
+            <IconCenter>
               {displayTool === 'hand' ? (
-                <Hand className={`w-5 h-5 ${isToolHighlighted ? 'text-white' : 'text-gray-700'}`} />
+                <Hand size={20} />
               ) : (
-                <MousePointer className={`w-5 h-5 ${isToolHighlighted ? 'text-white' : 'text-gray-700'}`} />
+                <MousePointer size={20} />
               )}
-            </div>
+            </IconCenter>
 
             {/* Chevron */}
-            <button
+            <ChevronButton
               onClick={(e) => {
                 e.stopPropagation();
                 setIsToolMenuOpen(!isToolMenuOpen);
               }}
-              className="flex items-center justify-center p-0.5 -mr-1 hover:opacity-70 transition-opacity"
               title="Show all tools"
             >
-              <ChevronDown className={`w-3 h-3 ${isToolHighlighted ? 'text-white' : 'text-gray-500'}`} />
-            </button>
-          </div>
-        </div>
+              <ChevronDown size={12} />
+            </ChevronButton>
+          </ToolButtonWrapper>
+        </Island>
 
         {/* Component Palette Island */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 px-2 py-2 pointer-events-auto">
-          <div className="flex items-center gap-1">
+        <Island>
+          <ButtonStrip>
             {COMPONENT_CATEGORIES.map((category) => {
               const components = componentsByCategory.get(category.id) || [];
               const selectedType = selectedComponents.get(category.id);
@@ -270,10 +445,10 @@ export function FloatingPalette({ onComponentSelect }: FloatingPaletteProps) {
                 />
               );
             })}
-          </div>
-        </div>
-      </div>
-    </div>
+          </ButtonStrip>
+        </Island>
+      </PaletteRow>
+    </PaletteRoot>
   );
 }
 
@@ -303,43 +478,26 @@ function CategoryButton({
   if (!mainComponent) return null;
 
   return (
-    <div className="relative">
+    <CategoryButtonWrapper>
       {/* Submenu */}
       {isExpanded && hasSubItems && (
-        <div
-          className="
-            flyout-menu
-            absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-            bg-white/95 backdrop-blur-sm rounded-xl shadow-xl
-            border border-gray-200/50
-            p-2 space-y-1
-            min-w-[200px]
-          "
-        >
-          <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            {category.name}
-          </div>
-          {components.map((component) => (
-            <ComponentMenuItem
-              key={component.type}
-              component={component}
-              onSelect={onComponentSelectFromFlyout}
-              isSelected={component.type === mainComponent.type}
-            />
-          ))}
-        </div>
+        <FlyoutMenu data-flyout-menu>
+          <FlyoutComponentMenu>
+            <FlyoutLabel>{category.name}</FlyoutLabel>
+            {components.map((component) => (
+              <ComponentMenuItem
+                key={component.type}
+                component={component}
+                onSelect={onComponentSelectFromFlyout}
+                isSelected={component.type === mainComponent.type}
+              />
+            ))}
+          </FlyoutComponentMenu>
+        </FlyoutMenu>
       )}
 
       {/* Main Button */}
-      <div
-        className={`
-          relative flex items-center justify-center gap-1
-          h-10 px-3 rounded-lg
-          bg-transparent text-gray-700 hover:bg-gray-100
-          transition-all duration-150
-          ${isExpanded ? 'bg-gray-100' : ''}
-        `}
-      >
+      <CategoryMainButton $isExpanded={isExpanded}>
         {/* Main icon - draggable and adds component */}
         <ComponentIcon
           component={mainComponent}
@@ -348,19 +506,18 @@ function CategoryButton({
 
         {/* Chevron - only for toggling menu */}
         {hasSubItems && (
-          <button
+          <ChevronButton
             onClick={(e) => {
               e.stopPropagation();
               onToggle();
             }}
-            className="flex items-center justify-center p-0.5 -mr-1 hover:opacity-70 transition-opacity"
             title={`Show all ${category.name} components`}
           >
-            <ChevronDown className="w-3 h-3 text-gray-500" />
-          </button>
+            <ChevronDown size={12} />
+          </ChevronButton>
         )}
-      </div>
-    </div>
+      </CategoryMainButton>
+    </CategoryButtonWrapper>
   );
 }
 
@@ -392,17 +549,14 @@ function ComponentIcon({ component, onSelect }: ComponentIconProps) {
   };
 
   return (
-    <div
+    <DraggableIcon
       {...dragProps}
       onClick={handleClick}
-      className={`
-        flex items-center justify-center cursor-grab
-        ${isDragging ? 'opacity-50 cursor-grabbing' : ''}
-      `}
+      $isDragging={isDragging}
       title={component.description}
     >
-      <Icon className="w-5 h-5 text-gray-700" />
-    </div>
+      <Icon size={20} />
+    </DraggableIcon>
   );
 }
 
@@ -435,22 +589,15 @@ function ComponentMenuItem({ component, onSelect, isSelected }: ComponentMenuIte
   };
 
   return (
-    <button
+    <FlyoutMenuItem
       {...dragProps}
       onClick={handleClick}
-      className={`
-        w-full flex items-center gap-3 px-3 py-2 rounded-lg
-        text-gray-700 hover:bg-gray-100
-        transition-all duration-150
-        ${isDragging ? 'opacity-50 cursor-grabbing' : 'cursor-grab'}
-        ${isSelected ? 'bg-gray-100' : ''}
-      `}
+      $isDragging={isDragging}
+      $isSelected={isSelected ?? false}
       title={component.description}
     >
-      <Icon className="w-4 h-4 text-gray-600" />
-      <span className="text-sm font-medium">
-        {component.name}
-      </span>
-    </button>
+      <FlyoutMenuItemIcon><Icon size={16} /></FlyoutMenuItemIcon>
+      <FlyoutMenuItemLabel>{component.name}</FlyoutMenuItemLabel>
+    </FlyoutMenuItem>
   );
 }

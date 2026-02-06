@@ -1,9 +1,88 @@
 import React, { useCallback, useMemo } from 'react';
+import styled from 'styled-components';
 import { Layers, ChevronDown, ChevronRight } from 'lucide-react';
 import { useEditorStore } from '@/store/editorStore';
 import { usePersistentUIStore } from '@/plugins/app-shell/hooks/usePersistence';
 import { LayerTree } from './LayerTree';
 import { stringToPath, pathToString } from '@/utils/pathUtils';
+
+const PanelContainer = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: ${p => p.theme.colors.bgSecondary};
+`;
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgTertiary};
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const HeaderTitle = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const HeaderButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+`;
+
+const HeaderIconButton = styled.button`
+  padding: 0.25rem;
+  border-radius: ${p => p.theme.radii.sm};
+  color: ${p => p.theme.colors.textSecondary};
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgPrimary};
+  }
+`;
+
+const TreeContainer = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.25rem;
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 1rem;
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const EmptyTitle = styled.p`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const EmptySubtitle = styled.p`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+  margin-top: 0.25rem;
+`;
 
 export function LayersPanel() {
   const {
@@ -148,37 +227,29 @@ export function LayersPanel() {
   const hasLayers = rootChildren.length > 0;
 
   return (
-    <div className="h-full flex flex-col bg-[var(--bg-secondary)]">
+    <PanelContainer>
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-[var(--text-secondary)]" />
-          <span className="text-sm font-medium text-[var(--text-primary)]">Layers</span>
-        </div>
-        
+      <Header>
+        <HeaderLeft>
+          <Layers size={16} />
+          <HeaderTitle>Layers</HeaderTitle>
+        </HeaderLeft>
+
         {/* Expand/Collapse buttons */}
         {hasLayers && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleExpandAll}
-              className="p-1 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)]"
-              title="Expand all"
-            >
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={handleCollapseAll}
-              className="p-1 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)]"
-              title="Collapse all"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <HeaderButtons>
+            <HeaderIconButton onClick={handleExpandAll} title="Expand all">
+              <ChevronDown size={14} />
+            </HeaderIconButton>
+            <HeaderIconButton onClick={handleCollapseAll} title="Collapse all">
+              <ChevronRight size={14} />
+            </HeaderIconButton>
+          </HeaderButtons>
         )}
-      </div>
+      </Header>
 
       {/* Layer Tree */}
-      <div className="flex-1 overflow-y-auto p-1">
+      <TreeContainer>
         {hasLayers ? (
           <LayerTree
             nodes={rootChildren}
@@ -193,17 +264,13 @@ export function LayersPanel() {
             onReorder={handleReorder}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center p-4">
-            <Layers className="w-8 h-8 text-[var(--text-tertiary)] mb-2" />
-            <p className="text-sm text-[var(--text-tertiary)]">
-              No layers yet
-            </p>
-            <p className="text-xs text-[var(--text-tertiary)] mt-1">
-              Add components to see them here
-            </p>
-          </div>
+          <EmptyState>
+            <Layers size={32} style={{ marginBottom: '0.5rem' }} />
+            <EmptyTitle>No layers yet</EmptyTitle>
+            <EmptySubtitle>Add components to see them here</EmptySubtitle>
+          </EmptyState>
         )}
-      </div>
-    </div>
+      </TreeContainer>
+    </PanelContainer>
   );
 }

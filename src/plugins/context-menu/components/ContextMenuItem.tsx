@@ -6,7 +6,85 @@
  */
 
 import React from 'react';
+import styled, { css } from 'styled-components';
 import type { ContextMenuAction } from '../types';
+
+const Divider = styled.div`
+  height: 1px;
+  background: ${p => p.theme.colors.border};
+  margin: 0.375rem 0;
+`;
+
+const MenuItemRow = styled.div<{ $danger?: boolean; $focused?: boolean }>`
+  padding: 0.625rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 100ms, color 100ms;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+
+  ${p => p.$danger
+    ? p.$focused
+      ? css`
+          background: ${p.theme.colors.error};
+          color: #fff;
+        `
+      : css`
+          color: ${p.theme.colors.error};
+          &:hover { background: ${p.theme.colors.bgTertiary}; }
+        `
+    : p.$focused
+      ? css`
+          background: ${p.theme.colors.accent};
+          color: #fff;
+        `
+      : css`
+          color: ${p.theme.colors.textPrimary};
+          &:hover { background: ${p.theme.colors.bgTertiary}; }
+        `
+  }
+`;
+
+const LeftContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+`;
+
+const IconSlot = styled.div`
+  width: 1rem;
+  height: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+`;
+
+const EmojiIcon = styled.span`
+  font-size: 1.125rem;
+  line-height: 1;
+`;
+
+const PlaceholderIcon = styled.span`
+  font-size: 1.125rem;
+  line-height: 1;
+  opacity: 0;
+`;
+
+const ItemLabel = styled.span`
+  font-size: ${p => p.theme.fontSizes.sm};
+  white-space: nowrap;
+`;
+
+const SubmenuArrow = styled.svg`
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  opacity: 0.5;
+`;
 
 interface ContextMenuItemProps {
   action: ContextMenuAction;
@@ -50,63 +128,49 @@ export function ContextMenuItem({
   return (
     <>
       {/* Divider */}
-      {action.dividerBefore && (
-        <div className="h-px bg-[var(--border-color)] my-1.5" />
-      )}
+      {action.dividerBefore && <Divider />}
 
       {/* Menu Item */}
-      <div
+      <MenuItemRow
         role="menuitem"
         tabIndex={isFocused ? 0 : -1}
-        className={`
-          px-4 py-2.5 cursor-pointer select-none
-          transition-colors duration-100
-          flex items-center justify-between gap-8
-          ${action.danger
-            ? isFocused
-              ? 'bg-red-500 text-white'
-              : 'text-red-600 hover:bg-red-50'
-            : isFocused
-              ? 'bg-[var(--accent-color)] text-white'
-              : 'text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
-          }
-        `}
+        $danger={!!action.danger}
+        $focused={isFocused}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         onMouseEnter={onMouseEnter}
       >
-      {/* Left side: Icon + Label */}
-      <div className="flex items-center gap-3 flex-1">
-        {/* Icon */}
-        <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-          {action.icon ? (
-            typeof action.icon === 'string' ? (
-              <span className="text-lg leading-none">{action.icon}</span>
+        {/* Left side: Icon + Label */}
+        <LeftContent>
+          {/* Icon */}
+          <IconSlot>
+            {action.icon ? (
+              typeof action.icon === 'string' ? (
+                <EmojiIcon>{action.icon}</EmojiIcon>
+              ) : (
+                <action.icon size={16} strokeWidth={2} />
+              )
             ) : (
-              <action.icon size={16} strokeWidth={2} />
-            )
-          ) : (
-            <span className="text-lg leading-none opacity-0">·</span>
-          )}
-        </div>
+              <PlaceholderIcon>·</PlaceholderIcon>
+            )}
+          </IconSlot>
 
-        {/* Label */}
-        <span className="text-sm whitespace-nowrap">{action.label}</span>
-      </div>
+          {/* Label */}
+          <ItemLabel>{action.label}</ItemLabel>
+        </LeftContent>
 
         {/* Right side: Submenu indicator */}
         {hasSubmenu && (
-          <svg
-            className="w-3.5 h-3.5 flex-shrink-0 opacity-50"
+          <SubmenuArrow
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={2.5}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
+          </SubmenuArrow>
         )}
-      </div>
+      </MenuItemRow>
     </>
   );
 }

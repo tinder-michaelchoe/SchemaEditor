@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import styled, { css } from 'styled-components';
 import { usePluginContext } from '../../../core/hooks/usePluginContext';
 import { useDocumentStore } from '../../../core/store/documentStore';
 import { useSelectionStore } from '../../../core/store/selectionStore';
@@ -17,6 +18,263 @@ import { getEventLog, clearEventLog } from '../index';
 import { X, Trash2, Search, ChevronDown, ChevronRight, Copy, Check } from 'lucide-react';
 
 type Tab = 'events' | 'state' | 'plugins';
+
+/* ── Styled Components ── */
+
+const PanelWrapper = styled.div`
+  height: 16rem;
+  border-top: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgSecondary};
+  display: flex;
+  flex-direction: column;
+`;
+
+const HeaderBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgTertiary};
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const HeaderTitle = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const TabGroup = styled.div`
+  display: flex;
+  gap: 0.25rem;
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.25rem;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+
+  ${p =>
+    p.$active
+      ? css`
+          background: ${p.theme.colors.accent};
+          color: #fff;
+        `
+      : css`
+          background: transparent;
+          color: ${p.theme.colors.textSecondary};
+          &:hover {
+            color: ${p.theme.colors.textPrimary};
+            background: ${p.theme.colors.bgPrimary};
+          }
+        `}
+`;
+
+const HeaderRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+`;
+
+const SearchIcon = styled(Search)`
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const FilterInput = styled.input`
+  width: 10rem;
+  padding: 0.25rem 0.5rem 0.25rem 1.75rem;
+  font-size: 0.75rem;
+  border-radius: 0.25rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+  color: ${p => p.theme.colors.textPrimary};
+
+  &::placeholder {
+    color: ${p => p.theme.colors.textTertiary};
+  }
+`;
+
+const IconButton = styled.button`
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgPrimary};
+  }
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  overflow: auto;
+  padding: 0.5rem;
+`;
+
+/* ── Event Log styled ── */
+
+const EmptyState = styled.div`
+  text-align: center;
+  color: ${p => p.theme.colors.textTertiary};
+  font-size: 0.875rem;
+  padding: 2rem 0;
+`;
+
+const EventList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+`;
+
+const EventCard = styled.div`
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+`;
+
+const EventHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+`;
+
+const Timestamp = styled.span`
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const EventType = styled.span`
+  color: ${p => p.theme.colors.accent};
+  font-weight: 500;
+`;
+
+const Spacer = styled.span`
+  width: 0.75rem;
+`;
+
+const EventDataPre = styled.pre`
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  color: ${p => p.theme.colors.textSecondary};
+  background: ${p => p.theme.colors.bgTertiary};
+  border-radius: 0.25rem;
+  overflow: auto;
+  max-height: 8rem;
+`;
+
+/* ── State Inspector styled ── */
+
+const SectionList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
+
+const SectionCard = styled.div`
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+`;
+
+const SectionTitle = styled.h4`
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+  margin-bottom: 0.5rem;
+`;
+
+const KeyValueList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const KeyValueRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+`;
+
+const KeyLabel = styled.span`
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const ValueLabel = styled.span`
+  color: ${p => p.theme.colors.textSecondary};
+  font-family: monospace;
+`;
+
+/* ── Plugin Status styled ── */
+
+const PluginList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const PluginRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+`;
+
+const PluginInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const StatusDot = styled.div<{ $active: boolean }>`
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: ${p => (p.$active ? p.theme.colors.success : p.theme.colors.textTertiary)};
+`;
+
+const PluginName = styled.span`
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const PluginId = styled.span`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const StatusLabel = styled.span<{ $active: boolean }>`
+  font-size: 0.75rem;
+  color: ${p => (p.$active ? p.theme.colors.success : p.theme.colors.textTertiary)};
+`;
 
 export function PlaygroundPanel() {
   const ctx = usePluginContext();
@@ -56,78 +314,60 @@ export function PlaygroundPanel() {
   };
   
   if (!isOpen) return null;
-  
+
   return (
-    <div className="h-64 border-t border-[var(--border-color)] bg-[var(--bg-secondary)] flex flex-col">
+    <PanelWrapper>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-[var(--text-primary)]">
-            Plugin Playground
-          </span>
-          
+      <HeaderBar>
+        <HeaderLeft>
+          <HeaderTitle>Plugin Playground</HeaderTitle>
+
           {/* Tabs */}
-          <div className="flex gap-1">
+          <TabGroup>
             {(['events', 'state', 'plugins'] as Tab[]).map(tab => (
-              <button
+              <TabButton
                 key={tab}
+                $active={activeTab === tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1 text-xs font-medium rounded transition-colors
-                  ${activeTab === tab
-                    ? 'bg-[var(--primary-color)] text-white'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-primary)]'
-                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
+              </TabButton>
             ))}
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
+          </TabGroup>
+        </HeaderLeft>
+
+        <HeaderRight>
           {activeTab === 'events' && (
             <>
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--text-tertiary)]" />
-                <input
+              <SearchWrapper>
+                <SearchIcon size={12} />
+                <FilterInput
                   type="text"
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                   placeholder="Filter events..."
-                  className="w-40 pl-7 pr-2 py-1 text-xs rounded bg-[var(--bg-primary)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
                 />
-              </div>
-              <button
-                onClick={handleCopy}
-                className="p-1 rounded hover:bg-[var(--bg-primary)] transition-colors"
-                title="Copy events"
-              >
+              </SearchWrapper>
+              <IconButton onClick={handleCopy} title="Copy events">
                 {copied ? (
-                  <Check className="w-3 h-3 text-[var(--success-color)]" />
+                  <Check size={12} color="var(--success-color)" />
                 ) : (
-                  <Copy className="w-3 h-3 text-[var(--text-secondary)]" />
+                  <Copy size={12} color="var(--text-secondary)" />
                 )}
-              </button>
-              <button
-                onClick={handleClear}
-                className="p-1 rounded hover:bg-[var(--bg-primary)] transition-colors"
-                title="Clear events"
-              >
-                <Trash2 className="w-3 h-3 text-[var(--text-secondary)]" />
-              </button>
+              </IconButton>
+              <IconButton onClick={handleClear} title="Clear events">
+                <Trash2 size={12} color="var(--text-secondary)" />
+              </IconButton>
             </>
           )}
-          <button
-            onClick={() => setIsOpen(false)}
-            className="p-1 rounded hover:bg-[var(--bg-primary)] transition-colors"
-          >
-            <X className="w-3 h-3 text-[var(--text-secondary)]" />
-          </button>
-        </div>
-      </div>
-      
+          <IconButton onClick={() => setIsOpen(false)}>
+            <X size={12} color="var(--text-secondary)" />
+          </IconButton>
+        </HeaderRight>
+      </HeaderBar>
+
       {/* Content */}
-      <div className="flex-1 overflow-auto p-2">
+      <ContentArea>
         {activeTab === 'events' && (
           <EventLog events={filteredEvents} />
         )}
@@ -137,8 +377,8 @@ export function PlaygroundPanel() {
         {activeTab === 'plugins' && (
           <PluginStatus />
         )}
-      </div>
-    </div>
+      </ContentArea>
+    </PanelWrapper>
   );
 }
 
@@ -148,48 +388,44 @@ function EventLog({ events }: { events: Array<{ timestamp: number; type: string;
   
   if (events.length === 0) {
     return (
-      <div className="text-center text-[var(--text-tertiary)] text-sm py-8">
+      <EmptyState>
         No events logged yet. Interact with the app to see events.
-      </div>
+      </EmptyState>
     );
   }
-  
+
   return (
-    <div className="space-y-1 font-mono text-xs">
+    <EventList>
       {events.map((event, index) => (
-        <div
-          key={`${event.timestamp}-${index}`}
-          className="p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-color)]"
-        >
-          <div
-            className="flex items-center gap-2 cursor-pointer"
+        <EventCard key={`${event.timestamp}-${index}`}>
+          <EventHeader
             onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
           >
             {event.data !== undefined ? (
               expandedIndex === index ? (
-                <ChevronDown className="w-3 h-3 text-[var(--text-tertiary)]" />
+                <ChevronDown size={12} color="var(--text-tertiary)" />
               ) : (
-                <ChevronRight className="w-3 h-3 text-[var(--text-tertiary)]" />
+                <ChevronRight size={12} color="var(--text-tertiary)" />
               )
             ) : (
-              <span className="w-3" />
+              <Spacer />
             )}
-            <span className="text-[var(--text-tertiary)]">
+            <Timestamp>
               {new Date(event.timestamp).toLocaleTimeString()}
-            </span>
-            <span className="text-[var(--primary-color)] font-medium">
+            </Timestamp>
+            <EventType>
               {event.type}
-            </span>
-          </div>
-          
+            </EventType>
+          </EventHeader>
+
           {expandedIndex === index && event.data !== undefined && (
-            <pre className="mt-2 p-2 text-[var(--text-secondary)] bg-[var(--bg-tertiary)] rounded overflow-auto max-h-32">
+            <EventDataPre>
               {JSON.stringify(event.data, null, 2)}
-            </pre>
+            </EventDataPre>
           )}
-        </div>
+        </EventCard>
       ))}
-    </div>
+    </EventList>
   );
 }
 
@@ -226,25 +462,21 @@ function StateInspector() {
   ];
   
   return (
-    <div className="space-y-3">
+    <SectionList>
       {sections.map(section => (
-        <div key={section.title} className="p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-color)]">
-          <h4 className="text-xs font-medium text-[var(--text-primary)] mb-2">
-            {section.title}
-          </h4>
-          <div className="space-y-1">
+        <SectionCard key={section.title}>
+          <SectionTitle>{section.title}</SectionTitle>
+          <KeyValueList>
             {Object.entries(section.data).map(([key, value]) => (
-              <div key={key} className="flex items-start gap-2 text-xs">
-                <span className="text-[var(--text-tertiary)]">{key}:</span>
-                <span className="text-[var(--text-secondary)] font-mono">
-                  {String(value)}
-                </span>
-              </div>
+              <KeyValueRow key={key}>
+                <KeyLabel>{key}:</KeyLabel>
+                <ValueLabel>{String(value)}</ValueLabel>
+              </KeyValueRow>
             ))}
-          </div>
-        </div>
+          </KeyValueList>
+        </SectionCard>
       ))}
-    </div>
+    </SectionList>
   );
 }
 
@@ -259,35 +491,20 @@ function PluginStatus() {
   ];
   
   return (
-    <div className="space-y-1">
+    <PluginList>
       {plugins.map(plugin => (
-        <div
-          key={plugin.id}
-          className="flex items-center justify-between p-2 rounded bg-[var(--bg-primary)] border border-[var(--border-color)]"
-        >
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${
-              plugin.status === 'active' 
-                ? 'bg-[var(--success-color)]' 
-                : 'bg-[var(--text-tertiary)]'
-            }`} />
-            <span className="text-xs font-medium text-[var(--text-primary)]">
-              {plugin.name}
-            </span>
-            <span className="text-xs text-[var(--text-tertiary)]">
-              ({plugin.id})
-            </span>
-          </div>
-          <span className={`text-xs ${
-            plugin.status === 'active'
-              ? 'text-[var(--success-color)]'
-              : 'text-[var(--text-tertiary)]'
-          }`}>
+        <PluginRow key={plugin.id}>
+          <PluginInfo>
+            <StatusDot $active={plugin.status === 'active'} />
+            <PluginName>{plugin.name}</PluginName>
+            <PluginId>({plugin.id})</PluginId>
+          </PluginInfo>
+          <StatusLabel $active={plugin.status === 'active'}>
             {plugin.status}
-          </span>
-        </div>
+          </StatusLabel>
+        </PluginRow>
       ))}
-    </div>
+    </PluginList>
   );
 }
 

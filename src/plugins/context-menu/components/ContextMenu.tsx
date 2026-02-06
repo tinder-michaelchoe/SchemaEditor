@@ -7,8 +7,33 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import styled from 'styled-components';
 import type { ContextMenuAction } from '../types';
 import { ContextMenuItem } from './ContextMenuItem';
+
+const MenuPanel = styled.div`
+  position: fixed;
+  z-index: 9999;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: ${p => p.theme.radii.lg};
+  box-shadow: ${p => p.theme.shadows.xl};
+  min-width: 220px;
+  padding: 0.375rem 0;
+  overflow: hidden;
+`;
+
+const SubmenuPanel = styled.div`
+  position: fixed;
+  z-index: 10000;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: ${p => p.theme.radii.lg};
+  box-shadow: ${p => p.theme.shadows.xl};
+  min-width: 200px;
+  padding: 0.375rem 0;
+  overflow: hidden;
+`;
 
 interface ContextMenuProps {
   visible: boolean;
@@ -217,10 +242,9 @@ export function ContextMenu({
   return createPortal(
     <>
       {/* Main Menu */}
-      <div
+      <MenuPanel
         ref={menuRef}
         role="menu"
-        className="fixed z-[9999] bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg shadow-xl min-w-[220px] py-1.5 overflow-hidden"
         style={{
           left: adjustedPosition.x,
           top: adjustedPosition.y,
@@ -244,14 +268,13 @@ export function ContextMenu({
             }}
           />
         ))}
-      </div>
+      </MenuPanel>
 
       {/* Submenu */}
       {openSubmenuId && openSubmenu && (
-        <div
+        <SubmenuPanel
           ref={submenuRef}
           role="menu"
-          className="fixed z-[10000] bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-lg shadow-xl min-w-[200px] py-1.5 overflow-hidden"
           style={{
             left: submenuPosition.x,
             top: submenuPosition.y,
@@ -265,7 +288,7 @@ export function ContextMenu({
               isFocused={false}
             />
           ))}
-        </div>
+        </SubmenuPanel>
       )}
     </>,
     document.body

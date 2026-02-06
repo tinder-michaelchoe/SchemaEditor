@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import styled from 'styled-components';
 import { Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { ComponentCard } from './ComponentCard';
 import { CategorySection } from './CategorySection';
 import {
   COMPONENT_CATEGORIES,
@@ -8,6 +10,120 @@ import {
   COMPONENT_DEFINITIONS,
 } from '../data/componentDefinitions';
 import type { ComponentDefinition } from '../data/componentDefinitions';
+
+const Wrapper = styled.div`
+  position: relative;
+`;
+
+const PopoverPanel = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  z-index: 50;
+  width: 18rem;
+  max-height: 70vh;
+  overflow: hidden;
+  background: ${p => p.theme.colors.bgSecondary};
+  border-radius: ${p => p.theme.radii.lg};
+  box-shadow: ${p => p.theme.shadows.xl};
+  border: 1px solid ${p => p.theme.colors.border};
+  display: flex;
+  flex-direction: column;
+`;
+
+const Header = styled.div`
+  padding: 0.75rem;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+`;
+
+const HeaderRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+`;
+
+const HeaderTitle = styled.h3`
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const CloseButton = styled.button`
+  padding: 0.25rem;
+  border-radius: ${p => p.theme.radii.sm};
+  color: ${p => p.theme.colors.textSecondary};
+
+  &:hover {
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+`;
+
+const SearchIconWrapper = styled.span`
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 0.375rem 0.75rem 0.375rem 2rem;
+  font-size: 0.875rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  border-radius: ${p => p.theme.radii.md};
+  border: 1px solid ${p => p.theme.colors.border};
+  color: ${p => p.theme.colors.textPrimary};
+
+  &::placeholder {
+    color: ${p => p.theme.colors.textTertiary};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${p => p.theme.colors.accent};
+  }
+`;
+
+const ComponentListArea = styled.div`
+  flex: 1;
+  overflow-y: auto;
+`;
+
+const SearchResults = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.5rem;
+`;
+
+const SearchResultItem = styled.div`
+  padding: 0 0.25rem;
+`;
+
+const EmptyMessage = styled.p`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textTertiary};
+  text-align: center;
+  padding: 1rem 0;
+`;
+
+const Footer = styled.div`
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgTertiary};
+`;
+
+const FooterText = styled.p`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+`;
 
 interface PalettePopoverProps {
   onComponentSelect?: (component: ComponentDefinition) => void;
@@ -72,83 +188,58 @@ export function PalettePopover({ onComponentSelect }: PalettePopoverProps) {
   };
 
   return (
-    <div className="relative">
+    <Wrapper>
       {/* Trigger Button */}
       <Button
         ref={buttonRef}
         variant="primary"
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1"
       >
-        <Plus className="w-4 h-4" />
+        <Plus size={16} />
         Add
       </Button>
 
       {/* Popover - positioned to the right to stay within viewport */}
       {isOpen && (
-        <div
-          ref={popoverRef}
-          className="
-            absolute top-full right-0 mt-2 z-50
-            w-72 max-h-[70vh] overflow-hidden
-            bg-[var(--bg-secondary)] rounded-lg shadow-xl
-            border border-[var(--border-color)]
-            flex flex-col
-          "
-        >
+        <PopoverPanel ref={popoverRef}>
           {/* Header with Search */}
-          <div className="p-3 border-b border-[var(--border-color)]">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-[var(--text-primary)]">
-                Components
-              </h3>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 rounded hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
-              <input
+          <Header>
+            <HeaderRow>
+              <HeaderTitle>Components</HeaderTitle>
+              <CloseButton onClick={() => setIsOpen(false)}>
+                <X size={16} />
+              </CloseButton>
+            </HeaderRow>
+            <SearchWrapper>
+              <SearchIconWrapper><Search size={16} /></SearchIconWrapper>
+              <SearchInput
                 type="text"
                 placeholder="Search components..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="
-                  w-full pl-8 pr-3 py-1.5 text-sm
-                  bg-[var(--bg-primary)] rounded-md
-                  border border-[var(--border-color)]
-                  focus:outline-none focus:border-[var(--accent-color)]
-                  text-[var(--text-primary)]
-                  placeholder-[var(--text-tertiary)]
-                "
               />
-            </div>
-          </div>
+            </SearchWrapper>
+          </Header>
 
           {/* Component List */}
-          <div className="flex-1 overflow-y-auto">
+          <ComponentListArea>
             {filteredComponents ? (
               // Search results
-              <div className="p-2 space-y-1">
+              <SearchResults>
                 {filteredComponents.length === 0 ? (
-                  <p className="text-sm text-[var(--text-tertiary)] text-center py-4">
-                    No components found
-                  </p>
+                  <EmptyMessage>No components found</EmptyMessage>
                 ) : (
                   filteredComponents.map((component) => (
-                    <div key={component.type} className="px-1">
+                    <SearchResultItem key={component.type}>
                       <ComponentCard
                         component={component}
                         onClick={() => handleComponentClick(component)}
                       />
-                    </div>
+                    </SearchResultItem>
                   ))
                 )}
-              </div>
+              </SearchResults>
             ) : (
               // Category view
               COMPONENT_CATEGORIES.map((category) => (
@@ -162,16 +253,16 @@ export function PalettePopover({ onComponentSelect }: PalettePopoverProps) {
                 />
               ))
             )}
-          </div>
+          </ComponentListArea>
 
           {/* Footer hint */}
-          <div className="px-3 py-2 border-t border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-            <p className="text-xs text-[var(--text-tertiary)]">
+          <Footer>
+            <FooterText>
               Drag components to the tree to add them
-            </p>
-          </div>
-        </div>
+            </FooterText>
+          </Footer>
+        </PopoverPanel>
       )}
-    </div>
+    </Wrapper>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import styled, { css } from 'styled-components';
 import {
   ChevronRight,
   ChevronDown,
@@ -23,6 +24,7 @@ import {
   Square,
   RectangleVertical,
 } from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
 import { useDragSource, useDropTarget } from '@/plugins/drag-drop-service';
 
 interface LayerItemProps {
@@ -41,7 +43,7 @@ interface LayerItemProps {
 }
 
 // Map component types to icons
-const TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const TYPE_ICONS: Record<string, React.ComponentType<LucideProps>> = {
   vstack: AlignVerticalJustifyCenter,
   hstack: AlignHorizontalJustifyCenter,
   zstack: Layers2,
@@ -58,6 +60,148 @@ const TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   forEach: Repeat,
   gradient: Square,
 };
+
+/* --- Styled Components --- */
+
+const ItemWrapper = styled.div`
+  position: relative;
+`;
+
+const DropIndicator = styled.div<{ $depth: number; $position: 'before' | 'after' }>`
+  position: absolute;
+  left: 0;
+  right: 0;
+  ${p => p.$position === 'before' ? 'top: 0;' : 'bottom: 0;'}
+  height: 2px;
+  background: ${p => p.theme.colors.accent};
+  border-radius: 9999px;
+  z-index: 10;
+  margin-left: ${p => p.$depth * 16 + 4}px;
+`;
+
+const ActionButton = styled.button<{ $isSelected: boolean; $forceShow: boolean }>`
+  padding: 2px;
+  border-radius: ${p => p.theme.radii.sm};
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: ${p => (p.$isSelected || p.$forceShow) ? 1 : 0};
+  transition: opacity 150ms;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const ItemRow = styled.div<{
+  $isSelected: boolean;
+  $isVisible: boolean;
+  $isLocked: boolean;
+  $isDragging: boolean;
+}>`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: ${p => p.theme.radii.sm};
+  font-size: 0.875rem;
+  cursor: ${p => p.$isLocked ? 'not-allowed' : 'pointer'};
+  transition: background-color 100ms;
+  opacity: ${p => (!p.$isVisible || p.$isDragging) ? 0.5 : 1};
+
+  ${p => p.$isSelected ? css`
+    background: ${p.theme.colors.accent};
+    color: white;
+  ` : css`
+    &:hover {
+      background: ${p.theme.colors.bgTertiary};
+    }
+  `}
+
+  &:hover ${ActionButton} {
+    opacity: 1;
+  }
+`;
+
+const DragHandle = styled.span<{ $isSelected: boolean; $isLocked: boolean }>`
+  flex-shrink: 0;
+  color: ${p => p.$isSelected ? 'rgba(255, 255, 255, 0.6)' : p.theme.colors.textTertiary};
+  visibility: ${p => p.$isLocked ? 'hidden' : 'visible'};
+  display: flex;
+  align-items: center;
+`;
+
+const ExpandButton = styled.button<{ $isSelected: boolean }>`
+  padding: 2px;
+  border-radius: ${p => p.theme.radii.sm};
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: ${p => p.$isSelected ? 'white' : p.theme.colors.textSecondary};
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const ChevronSpacer = styled.div`
+  width: 1rem;
+`;
+
+const TypeIconWrapper = styled.span<{ $isSelected: boolean }>`
+  flex-shrink: 0;
+  color: ${p => p.$isSelected ? 'white' : p.theme.colors.textSecondary};
+  display: flex;
+  align-items: center;
+`;
+
+const EditInput = styled.input`
+  flex: 1;
+  min-width: 0;
+  padding: 0 0.25rem;
+  font-size: 0.875rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  color: ${p => p.theme.colors.textPrimary};
+  border-radius: ${p => p.theme.radii.sm};
+  border: 1px solid ${p => p.theme.colors.accent};
+  outline: none;
+
+  &:focus {
+    box-shadow: 0 0 0 1px ${p => p.theme.colors.accent};
+  }
+`;
+
+const NodeName = styled.span<{ $isSelected: boolean }>`
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: ${p => p.$isSelected ? 'white' : p.theme.colors.textPrimary};
+`;
+
+const ContentPreview = styled.span<{ $isSelected: boolean }>`
+  margin-left: 0.375rem;
+  color: ${p => p.$isSelected ? 'rgba(255, 255, 255, 0.6)' : p.theme.colors.textTertiary};
+`;
+
+const IconColor = styled.span<{ $isSelected: boolean; $variant: 'visible' | 'hidden' | 'locked' | 'unlocked' }>`
+  display: flex;
+  align-items: center;
+  color: ${p => {
+    if (p.$variant === 'locked' && !p.$isSelected) return '#f97316';
+    if (p.$variant === 'hidden' && !p.$isSelected) return p.theme.colors.textSecondary;
+    if (p.$isSelected) {
+      if (p.$variant === 'visible' || p.$variant === 'unlocked') return 'rgba(255, 255, 255, 0.7)';
+      return 'white';
+    }
+    return p.theme.colors.textTertiary;
+  }};
+`;
 
 // Container types that can have children
 const CONTAINER_TYPES = ['vstack', 'hstack', 'zstack', 'sectionLayout', 'forEach'];
@@ -215,30 +359,20 @@ export function LayerItem({
   const showAfterLine = isOver && canDrop && dropPosition === 'after';
 
   return (
-    <div className="relative">
+    <ItemWrapper>
       {/* Drop indicator line - before */}
       {showBeforeLine && (
-        <div
-          className="absolute left-0 right-0 top-0 h-0.5 bg-[var(--accent-color)] rounded-full z-10"
-          style={{ marginLeft: `${depth * 16 + 4}px` }}
-        />
+        <DropIndicator $depth={depth} $position="before" />
       )}
 
-      <div
+      <ItemRow
         ref={itemRef}
         {...(isLocked ? {} : dragProps)}
         {...dropProps}
-        className={`
-          flex items-center gap-1 px-1 py-0.5 rounded text-sm cursor-pointer
-          transition-colors duration-100
-          ${isSelected
-            ? 'bg-[var(--accent-color)] text-white'
-            : 'hover:bg-[var(--bg-tertiary)]'
-          }
-          ${!isVisible ? 'opacity-50' : ''}
-          ${isLocked ? 'cursor-not-allowed' : ''}
-          ${isDragging ? 'opacity-50' : ''}
-        `}
+        $isSelected={isSelected}
+        $isVisible={isVisible}
+        $isLocked={isLocked}
+        $isDragging={isDragging}
         style={{ paddingLeft: `${depth * 16 + 4}px` }}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
@@ -246,118 +380,91 @@ export function LayerItem({
         onMouseLeave={handleMouseLeave}
       >
       {/* Drag handle */}
-      <GripVertical 
-        className={`w-3 h-3 flex-shrink-0 ${
-          isSelected ? 'text-white/60' : 'text-[var(--text-tertiary)]'
-        } ${isLocked ? 'invisible' : ''}`}
-      />
+      <DragHandle $isSelected={isSelected} $isLocked={isLocked}>
+        <GripVertical size={12} />
+      </DragHandle>
 
       {/* Expand/collapse chevron for containers */}
       {hasChildren ? (
-        <button
-          onClick={handleExpandClick}
-          className={`p-0.5 rounded hover:bg-black/10 ${
-            isSelected ? 'text-white' : 'text-[var(--text-secondary)]'
-          }`}
-        >
+        <ExpandButton $isSelected={isSelected} onClick={handleExpandClick}>
           {isExpanded ? (
-            <ChevronDown className="w-3 h-3" />
+            <ChevronDown size={12} />
           ) : (
-            <ChevronRight className="w-3 h-3" />
+            <ChevronRight size={12} />
           )}
-        </button>
+        </ExpandButton>
       ) : (
-        <div className="w-4" /> // Spacer for alignment
+        <ChevronSpacer />
       )}
 
       {/* Type icon */}
-      <Icon 
-        className={`w-4 h-4 flex-shrink-0 ${
-          isSelected ? 'text-white' : 'text-[var(--text-secondary)]'
-        }`} 
-      />
+      <TypeIconWrapper $isSelected={isSelected}>
+        <Icon size={16} />
+      </TypeIconWrapper>
 
       {/* Name */}
       {isEditing ? (
-        <input
+        <EditInput
           ref={inputRef}
           type="text"
           value={editName}
           onChange={(e) => setEditName(e.target.value)}
           onBlur={handleNameSubmit}
           onKeyDown={handleKeyDown}
-          className="flex-1 min-w-0 px-1 py-0 text-sm bg-white dark:bg-gray-800
-                     text-[var(--text-primary)] rounded border border-[var(--accent-color)]
-                     focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]"
           onClick={(e) => e.stopPropagation()}
         />
       ) : (
-        <span
-          className={`flex-1 min-w-0 truncate ${
-            isSelected ? 'text-white' : 'text-[var(--text-primary)]'
-          }`}
-        >
+        <NodeName $isSelected={isSelected}>
           {nodeName}
           {contentPreview && (
-            <span
-              className={`ml-1.5 ${
-                isSelected ? 'text-white/60' : 'text-[var(--text-tertiary)]'
-              }`}
-            >
+            <ContentPreview $isSelected={isSelected}>
               "{contentPreview}"
-            </span>
+            </ContentPreview>
           )}
-        </span>
+        </NodeName>
       )}
 
       {/* Visibility toggle */}
-      <button
+      <ActionButton
+        $isSelected={isSelected}
+        $forceShow={!isVisible}
         onClick={handleVisibilityClick}
-        className={`p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-black/10
-          ${isSelected ? 'opacity-100' : ''} 
-          ${!isVisible ? 'opacity-100' : ''}
-          transition-opacity`}
         title={isVisible ? 'Hide layer' : 'Show layer'}
       >
         {isVisible ? (
-          <Eye className={`w-3.5 h-3.5 ${
-            isSelected ? 'text-white/70' : 'text-[var(--text-tertiary)]'
-          }`} />
+          <IconColor $isSelected={isSelected} $variant="visible">
+            <Eye size={14} />
+          </IconColor>
         ) : (
-          <EyeOff className={`w-3.5 h-3.5 ${
-            isSelected ? 'text-white' : 'text-[var(--text-secondary)]'
-          }`} />
+          <IconColor $isSelected={isSelected} $variant="hidden">
+            <EyeOff size={14} />
+          </IconColor>
         )}
-      </button>
+      </ActionButton>
 
       {/* Lock toggle */}
-      <button
+      <ActionButton
+        $isSelected={isSelected}
+        $forceShow={isLocked}
         onClick={handleLockClick}
-        className={`p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-black/10
-          ${isSelected ? 'opacity-100' : ''} 
-          ${isLocked ? 'opacity-100' : ''}
-          transition-opacity`}
         title={isLocked ? 'Unlock layer' : 'Lock layer'}
       >
         {isLocked ? (
-          <Lock className={`w-3.5 h-3.5 ${
-            isSelected ? 'text-white' : 'text-orange-500'
-          }`} />
+          <IconColor $isSelected={isSelected} $variant="locked">
+            <Lock size={14} />
+          </IconColor>
         ) : (
-          <Unlock className={`w-3.5 h-3.5 ${
-            isSelected ? 'text-white/70' : 'text-[var(--text-tertiary)]'
-          }`} />
+          <IconColor $isSelected={isSelected} $variant="unlocked">
+            <Unlock size={14} />
+          </IconColor>
         )}
-      </button>
-      </div>
+      </ActionButton>
+      </ItemRow>
 
       {/* Drop indicator line - after */}
       {showAfterLine && (
-        <div
-          className="absolute left-0 right-0 bottom-0 h-0.5 bg-[var(--accent-color)] rounded-full z-10"
-          style={{ marginLeft: `${depth * 16 + 4}px` }}
-        />
+        <DropIndicator $depth={depth} $position="after" />
       )}
-    </div>
+    </ItemWrapper>
   );
 }
