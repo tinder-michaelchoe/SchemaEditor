@@ -105,10 +105,8 @@ const StyleRow = styled.div<{ $isActive: boolean }>`
   ${p => p.$isActive
     ? css`
         background-color: ${p.theme.colors.accent}1a;
-        border: 1px solid ${p.theme.colors.accent}4d;
       `
     : css`
-        border: 1px solid transparent;
         &:hover {
           background-color: ${p.theme.colors.bgTertiary};
         }
@@ -130,7 +128,6 @@ const EditButton = styled.button<{ $isEditing: boolean }>`
         color: ${p.theme.colors.textTertiary};
         &:hover {
           color: ${p.theme.colors.accent};
-          background-color: ${p.theme.colors.bgPrimary};
         }
       `
   }
@@ -165,10 +162,15 @@ const CheckIcon = styled(Check)`
 const DeleteButton = styled.button`
   padding: 4px;
   color: ${p => p.theme.colors.textTertiary};
-  transition: color 0.15s;
+  opacity: 0;
+  transition: color 0.15s, opacity 0.15s;
+
+  ${StyleRow}:hover & {
+    opacity: 1;
+  }
 
   &:hover {
-    color: #ef4444;
+    color: ${p => p.theme.colors.error};
   }
 `;
 
