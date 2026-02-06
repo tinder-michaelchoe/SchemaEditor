@@ -141,8 +141,8 @@ The project includes these built-in plugins:
 - **Framework**: React 19.2.0
 - **Language**: TypeScript 5.9.3
 - **Build Tool**: Vite 7.2.4
-- **State Management**: Zustand 5.0.10
-- **Styling**: Tailwind CSS 4.1.18
+- **State Management**: React Context API
+- **Styling**: styled-components 6.3.8
 - **Validation**: AJV 8.17.1 with JSON Schema support
 - **Testing**: Vitest 4.0.17 with Testing Library
 - **Icons**: Lucide React 0.562.0
@@ -171,7 +171,6 @@ SchemaEditor/
 ├── src/
 │   ├── core/                 # Core layer
 │   │   ├── types/           # Type definitions
-│   │   ├── store/           # Zustand stores
 │   │   ├── hooks/           # React hooks
 │   │   ├── PluginRegistry.ts
 │   │   ├── ExtensionRegistry.ts
@@ -179,6 +178,12 @@ SchemaEditor/
 │   │   ├── EventBus.ts
 │   │   ├── ActionAPI.ts
 │   │   └── SlotManager.tsx
+│   ├── store/               # State management
+│   │   ├── EditorContext.tsx    # Document state context
+│   │   ├── SelectionContext.tsx # Selection state context
+│   │   ├── UIContext.tsx        # UI state context
+│   │   ├── persistence.ts       # State persistence
+│   │   └── storeRefs.ts         # Store references
 │   ├── plugins/             # Plugin implementations
 │   │   ├── tree-view/
 │   │   ├── preview/
@@ -212,33 +217,37 @@ The project follows a phased development approach:
 
 - **[Development Phases Overview](./docs/plans/README.md)** - High-level roadmap and phase summary
 - **[Phase 1: App Shell](./docs/plans/PHASE_1_APP_SHELL.md)** ✅ Complete - Core architecture and plugin system
-- **[Phase 2: Palette + Inspector](./docs/plans/PHASE_2_PALETTE_INSPECTOR.md)** - Component palette and property inspector
-- **[Phase 3: Canvas View](./docs/plans/PHASE_3_CANVAS_VIEW.md)** - Visual canvas editing mode
+- **[Phase 2: Palette + Inspector](./docs/plans/PHASE_2_PALETTE_INSPECTOR.md)** ✅ Complete - Component palette and property inspector
+- **[Phase 3: Canvas View](./docs/plans/PHASE_3_CANVAS_VIEW.md)** ✅ Complete - Visual canvas editing mode
 - **[Phase 4: Design System](./docs/plans/PHASE_4_DESIGN_SYSTEM.md)** - Design system browser and templates
 - **[Phase 5: Debug + Actions](./docs/plans/PHASE_5_DEBUG_ACTIONS.md)** - State debugger and action flow editor
 - **[Phase 6: Collaboration](./docs/plans/PHASE_6_COLLABORATION.md)** - Real-time collaboration features
 
-## Development Roadmap
+## State Management
 
-### Completed (Phase 1)
+The Schema Editor uses React Context API for state management, organized into three main contexts:
+
+- **EditorContext**: Manages document state, schema validation, and document operations
+- **SelectionContext**: Handles node selection, multi-selection, and selection-related operations
+- **UIContext**: Controls UI state including active view, panel visibility, and UI preferences
+
+State is persisted to localStorage automatically, with support for undo/redo and state synchronization across components.
+
+## Development Status
+
+### Completed Features
 - ✅ Plugin system with capability-based security
 - ✅ UI slots and rendering system
 - ✅ Event bus for cross-plugin communication
-- ✅ Selection and document stores
+- ✅ React Context-based state management
+- ✅ styled-components integration
 - ✅ Core plugins (tree-view, preview, error-console)
-
-### In Progress (Phase 2)
-- ⏳ Component palette with drag-and-drop
-- ⏳ Property inspector with schema-driven forms
-- ⏳ Drag-drop coordination service
-
-### Planned
-- Phase 3: Visual canvas editing mode
-- Phase 4: Design system browser and templates
-- Phase 5: State debugger and action flow editor
-- Phase 6: Collaboration features (comments, presence, version history)
-
-For detailed timelines and estimates, see the [Development Plans](./docs/plans/README.md).
+- ✅ Component palette with drag-and-drop
+- ✅ Property inspector with schema-driven forms
+- ✅ Visual canvas editing mode
+- ✅ Drag-drop coordination service
+- ✅ Layers panel for layer management
+- ✅ Output panel for export functionality
 
 ## Key Features & Capabilities
 
@@ -312,6 +321,14 @@ Contributions are welcome! Please read the [Contributing Guidelines](./docs/CONT
 7. Push to the branch (`git push origin feature/amazing-feature`)
 8. Open a Pull Request
 
+### Code Style
+
+- Use TypeScript for all code
+- Follow the existing styled-components patterns for styling
+- Use React Context API for state management
+- Follow the plugin architecture for new features
+- Write tests for new functionality
+
 ## License
 
 This project is available under the MIT License. See the LICENSE file for details.
@@ -321,14 +338,14 @@ This project is available under the MIT License. See the LICENSE file for detail
 Built with:
 - React and the React ecosystem
 - Vite for blazing-fast development
-- Zustand for simple, scalable state management
+- React Context API for state management
 - AJV for robust JSON schema validation
-- Tailwind CSS for utility-first styling
+- styled-components for component styling
 
 ---
 
 For questions, issues, or feature requests, please open an issue on GitHub.
 
-**Project Status**: Active Development | Phase 1 Complete
+**Project Status**: Active Development | Phases 1-3 Complete
 
 For detailed documentation, see the [docs](./docs/) directory.
