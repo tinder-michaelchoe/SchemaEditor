@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useEditorStore } from '@/store/editorStore';
 import { getValueAtPath, stringToPath } from '@/utils/pathUtils';
-import { ChevronRight, Plus, Check, Palette, X } from 'lucide-react';
+import { ChevronRight, Plus, Check, Palette, X, Pencil } from 'lucide-react';
 
 interface StyleDefinition {
   inherits?: string;
@@ -37,6 +37,8 @@ export function StylesPanel() {
   const [newStyleName, setNewStyleName] = useState('');
   const [newStyle, setNewStyle] = useState<StyleDefinition>({});
   const [editingStyleId, setEditingStyleId] = useState<string | null>(null);
+  const [editingStyle, setEditingStyle] = useState<StyleDefinition>({});
+  const [deletingStyleId, setDeletingStyleId] = useState<string | null>(null);
 
   // Get styles from document
   const styles = useMemo(() => {
@@ -88,30 +90,44 @@ export function StylesPanel() {
     setIsCreatingNew(false);
   }, [data, newStyleName, newStyle, updateValue]);
 
-  // Delete a style
-  const handleDeleteStyle = useCallback((styleId: string) => {
-    const currentStyles = { ...(data as Record<string, unknown>)?.styles as object } || {};
-    delete (currentStyles as Record<string, unknown>)[styleId];
-    updateValue(['styles'], currentStyles);
-  }, [data, updateValue]);
+  // Confirm and delete a style
+  const handleConfirmDelete = useCallback(() => {
+    if (!deletingStyleId) return;
 
-  // Render style preview chip
-  const renderStylePreview = (style: StyleDefinition) => {
-    return (
-      <div 
-        className="w-6 h-6 rounded border border-[var(--border-color)] flex items-center justify-center text-xs"
-        style={{
-          backgroundColor: style.backgroundColor || 'transparent',
-          color: style.textColor || 'inherit',
-          borderRadius: style.cornerRadius ? `${Math.min(style.cornerRadius, 12)}px` : undefined,
-        }}
-      >
-        {style.fontWeight === 'bold' || style.fontWeight === 'heavy' || style.fontWeight === 'black' 
-          ? 'B' 
-          : 'A'}
-      </div>
-    );
-  };
+    const currentStyles = { ...(data as Record<string, unknown>)?.styles as object } || {};
+    delete (currentStyles as Record<string, unknown>)[deletingStyleId];
+    updateValue(['styles'], currentStyles);
+    setDeletingStyleId(null);
+  }, [data, updateValue, deletingStyleId]);
+
+  // Start editing a style (or close if already editing)
+  const handleStartEdit = useCallback((styleId: string, style: StyleDefinition) => {
+    if (editingStyleId === styleId) {
+      // If clicking the same style that's being edited, close the panel
+      setEditingStyleId(null);
+      setEditingStyle({});
+    } else {
+      // Otherwise, open the edit panel for this style
+      setEditingStyleId(styleId);
+      setEditingStyle({ ...style });
+      setIsCreatingNew(false);
+    }
+  }, [editingStyleId]);
+
+  // Save edited style
+  const handleSaveEdit = useCallback(() => {
+    if (!editingStyleId) return;
+
+    const currentStyles = (data as Record<string, unknown>)?.styles || {};
+    updateValue(['styles'], {
+      ...currentStyles as object,
+      [editingStyleId]: editingStyle,
+    });
+
+    // Reset editing state
+    setEditingStyleId(null);
+    setEditingStyle({});
+  }, [data, editingStyleId, editingStyle, updateValue]);
 
   // Render style properties summary
   const renderStyleSummary = (style: StyleDefinition) => {
@@ -144,64 +160,232 @@ export function StylesPanel() {
 
       {isExpanded && (
         <div className="px-3 pb-3">
-          {/* Current Style */}
-          {selectedPath && (
-            <div className="mb-3 p-2 bg-[var(--bg-tertiary)] rounded-md">
-              <div className="text-xs text-[var(--text-tertiary)] mb-1">Applied Style</div>
-              {currentStyleId ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--text-primary)] font-medium">{currentStyleId}</span>
-                  <button
-                    onClick={handleRemoveStyle}
-                    className="text-xs text-red-500 hover:text-red-600"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <span className="text-sm text-[var(--text-tertiary)] italic">None</span>
-              )}
-            </div>
-          )}
-
           {/* Existing Styles List */}
           {Object.keys(styles).length > 0 && (
             <div className="space-y-1 mb-3">
               <div className="text-xs text-[var(--text-tertiary)] mb-2">Available Styles</div>
               {Object.entries(styles).map(([styleId, style]) => (
-                <div
-                  key={styleId}
-                  className={`
-                    flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors
-                    ${currentStyleId === styleId 
-                      ? 'bg-[var(--accent-color)]/10 border border-[var(--accent-color)]/30' 
-                      : 'hover:bg-[var(--bg-tertiary)]'
-                    }
-                  `}
-                  onClick={() => handleApplyStyle(styleId)}
-                >
-                  {renderStylePreview(style)}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-[var(--text-primary)] font-medium truncate">
-                      {styleId}
-                    </div>
-                    <div className="text-xs text-[var(--text-tertiary)] truncate">
-                      {renderStyleSummary(style)}
-                    </div>
-                  </div>
-                  {currentStyleId === styleId && (
-                    <Check className="w-4 h-4 text-[var(--accent-color)]" />
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteStyle(styleId);
-                    }}
-                    className="p-1 text-[var(--text-tertiary)] hover:text-red-500 transition-colors"
+                <React.Fragment key={styleId}>
+                  <div
+                    className={`
+                      flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors
+                      ${currentStyleId === styleId
+                        ? 'bg-[var(--accent-color)]/10 border border-[var(--accent-color)]/30'
+                        : 'hover:bg-[var(--bg-tertiary)]'
+                      }
+                    `}
+                    onClick={() => handleApplyStyle(styleId)}
                   >
-                    <X className="w-3 h-3" />
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit(styleId, style);
+                      }}
+                      className={`
+                        p-1.5 rounded transition-colors
+                        ${editingStyleId === styleId
+                          ? 'text-[var(--accent-color)] bg-[var(--accent-color)]/10'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--accent-color)] hover:bg-[var(--bg-primary)]'
+                        }
+                      `}
+                      title={editingStyleId === styleId ? "Close editor" : "Edit style"}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-[var(--text-primary)] font-medium truncate">
+                        {styleId}
+                      </div>
+                      <div className="text-xs text-[var(--text-tertiary)] truncate">
+                        {renderStyleSummary(style)}
+                      </div>
+                    </div>
+                    {currentStyleId === styleId && (
+                      <Check className="w-4 h-4 text-[var(--accent-color)]" />
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingStyleId(styleId);
+                      }}
+                      className="p-1 text-[var(--text-tertiary)] hover:text-red-500 transition-colors"
+                      title="Delete style"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* Delete Confirmation - appears right below the row */}
+                  {deletingStyleId === styleId && (
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md mb-1 mt-1">
+                      <div className="text-sm text-red-900 dark:text-red-100 mb-3">
+                        Delete style "{styleId}"? This cannot be undone.
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setDeletingStyleId(null)}
+                          className="flex-1 px-3 py-1.5 text-sm text-[var(--text-secondary)] bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md hover:bg-[var(--bg-secondary)] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleConfirmDelete}
+                          className="flex-1 px-3 py-1.5 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Edit Style Form - appears right below the edited row */}
+                  {editingStyleId === styleId && (
+                    <div className="p-3 bg-[var(--bg-tertiary)] rounded-md space-y-3 mb-1 mt-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-xs font-medium text-[var(--text-primary)]">Edit Style: {editingStyleId}</div>
+                      </div>
+
+                      {/* Preview Section */}
+                      <div>
+                        <label className="text-xs text-[var(--text-tertiary)]">Preview</label>
+                        <div className="mt-1 p-3 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md flex items-center justify-center">
+                          <div
+                            className="px-3 py-2 rounded inline-block"
+                            style={{
+                              fontSize: editingStyle.fontSize ? `${editingStyle.fontSize}px` : '14px',
+                              fontWeight: editingStyle.fontWeight || 'normal',
+                              color: editingStyle.textColor || 'var(--text-primary)',
+                              backgroundColor: editingStyle.backgroundColor || 'transparent',
+                              borderRadius: editingStyle.cornerRadius ? `${editingStyle.cornerRadius}px` : undefined,
+                            }}
+                          >
+                            {editingStyleId}
+                          </div>
+                        </div>
+                      </div>
+
+              {/* Font Size */}
+              <div>
+                <label className="text-xs text-[var(--text-tertiary)]">Font Size</label>
+                <input
+                  type="number"
+                  value={editingStyle.fontSize || ''}
+                  onChange={(e) => setEditingStyle({ ...editingStyle, fontSize: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="16"
+                  className="w-full mt-1 px-2 py-1.5 text-sm bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md text-[var(--text-primary)]"
+                />
+              </div>
+
+              {/* Font Weight */}
+              <div>
+                <label className="text-xs text-[var(--text-tertiary)]">Font Weight</label>
+                <select
+                  value={editingStyle.fontWeight || ''}
+                  onChange={(e) => setEditingStyle({ ...editingStyle, fontWeight: e.target.value || undefined })}
+                  className="w-full mt-1 px-2 py-1.5 text-sm bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md text-[var(--text-primary)]"
+                >
+                  <option value="">Select weight...</option>
+                  {FONT_WEIGHTS.map((weight) => (
+                    <option key={weight} value={weight}>{weight}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Text Alignment */}
+              <div>
+                <label className="text-xs text-[var(--text-tertiary)]">Text Alignment</label>
+                <div className="flex gap-1 mt-1">
+                  {TEXT_ALIGNMENTS.map((alignment) => (
+                    <button
+                      key={alignment}
+                      onClick={() => setEditingStyle({ ...editingStyle, textAlignment: alignment })}
+                      className={`
+                        flex-1 px-2 py-1.5 text-xs rounded-md transition-colors
+                        ${editingStyle.textAlignment === alignment
+                          ? 'bg-[var(--accent-color)] text-white'
+                          : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
+                        }
+                      `}
+                    >
+                      {alignment}
+                    </button>
+                  ))}
                 </div>
+              </div>
+
+              {/* Text Color */}
+              <div>
+                <label className="text-xs text-[var(--text-tertiary)]">Text Color</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="color"
+                    value={editingStyle.textColor || '#000000'}
+                    onChange={(e) => setEditingStyle({ ...editingStyle, textColor: e.target.value })}
+                    className="w-8 h-8 rounded border border-[var(--border-color)] cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={editingStyle.textColor || ''}
+                    onChange={(e) => setEditingStyle({ ...editingStyle, textColor: e.target.value || undefined })}
+                    placeholder="#000000"
+                    className="flex-1 px-2 py-1.5 text-sm bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md text-[var(--text-primary)]"
+                  />
+                </div>
+              </div>
+
+              {/* Background Color */}
+              <div>
+                <label className="text-xs text-[var(--text-tertiary)]">Background Color</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="color"
+                    value={editingStyle.backgroundColor || '#ffffff'}
+                    onChange={(e) => setEditingStyle({ ...editingStyle, backgroundColor: e.target.value })}
+                    className="w-8 h-8 rounded border border-[var(--border-color)] cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={editingStyle.backgroundColor || ''}
+                    onChange={(e) => setEditingStyle({ ...editingStyle, backgroundColor: e.target.value || undefined })}
+                    placeholder="#FFFFFF"
+                    className="flex-1 px-2 py-1.5 text-sm bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md text-[var(--text-primary)]"
+                  />
+                </div>
+              </div>
+
+              {/* Corner Radius */}
+              <div>
+                <label className="text-xs text-[var(--text-tertiary)]">Corner Radius</label>
+                <input
+                  type="number"
+                  value={editingStyle.cornerRadius || ''}
+                  onChange={(e) => setEditingStyle({ ...editingStyle, cornerRadius: e.target.value ? Number(e.target.value) : undefined })}
+                  placeholder="0"
+                  className="w-full mt-1 px-2 py-1.5 text-sm bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md text-[var(--text-primary)]"
+                />
+              </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={() => {
+                            setEditingStyleId(null);
+                            setEditingStyle({});
+                          }}
+                          className="flex-1 px-3 py-1.5 text-sm text-[var(--text-secondary)] bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md hover:bg-[var(--bg-secondary)] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleSaveEdit}
+                          className="flex-1 px-3 py-1.5 text-sm text-white bg-[var(--accent-color)] rounded-md hover:opacity-90 transition-opacity"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </React.Fragment>
               ))}
             </div>
           )}

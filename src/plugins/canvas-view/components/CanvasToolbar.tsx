@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { 
   MousePointer, 
   Hand, 
@@ -53,9 +53,6 @@ interface CanvasToolbarProps {
   selectedDevice: string;
   onDeviceChange: (deviceId: string) => void;
   onCenterFrame: () => void;
-  
-  // Optional palette slot
-  paletteSlot?: ReactNode;
 }
 
 const ZOOM_PRESETS = [0.1, 0.25, 0.5, 1, 2, 4];
@@ -75,7 +72,6 @@ export function CanvasToolbar({
   selectedDevice,
   onDeviceChange,
   onCenterFrame,
-  paletteSlot,
 }: CanvasToolbarProps) {
   const zoomPercent = Math.round(zoom * 100);
   const selectedDeviceInfo = DEVICE_FRAMES.find(d => d.id === selectedDevice);
@@ -189,11 +185,8 @@ export function CanvasToolbar({
         </Button>
       </div>
 
-      {/* Spacer to push palette to the right */}
+      {/* Spacer */}
       <div className="flex-1" />
-
-      {/* Palette slot (Add+ button) */}
-      {paletteSlot}
     </div>
   );
 }

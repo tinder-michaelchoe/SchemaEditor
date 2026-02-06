@@ -4,11 +4,10 @@ import type { TabDefinition } from './TabbedPanel';
 import { ResizableDivider } from './ResizableDivider';
 import { Toolbar } from './Toolbar';
 import { usePersistence } from '../hooks/usePersistence';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const MIN_PANEL_WIDTH = 250;
 const MAX_PANEL_WIDTH = 800;
-const MIN_INSPECTOR_WIDTH = 240;
-const MAX_INSPECTOR_WIDTH = 400;
 
 interface AppShellProps {
   // Left panel tabs (Preview, JSON Output)
@@ -16,9 +15,6 @@ interface AppShellProps {
 
   // Right panel tabs (Tree, Canvas, Split)
   rightTabs: TabDefinition[];
-
-  // Property Inspector (shown on the right side when component selected)
-  propertyInspector?: ReactNode;
 
   // Error Console (collapsible bottom panel)
   errorConsole?: ReactNode;
@@ -38,7 +34,6 @@ interface AppShellProps {
 export function AppShell({
   leftTabs,
   rightTabs,
-  propertyInspector,
   errorConsole,
   hasSchema,
   isValid,
@@ -51,22 +46,13 @@ export function AppShell({
     leftPanelTab,
     rightPanelTab,
     isDarkMode,
-    inspectorWidth,
-    isInspectorOpen,
+    isLeftPanelCollapsed,
     setLeftPanelWidth,
     setLeftPanelTab,
     setRightPanelTab,
     setDarkMode,
-    setInspectorWidth,
-    setIsInspectorOpen,
+    setIsLeftPanelCollapsed,
   } = usePersistence();
-
-  // Handle inspector resize (negative delta = growing from left)
-  const handleInspectorResize = useCallback((delta: number) => {
-    setInspectorWidth(
-      Math.min(MAX_INSPECTOR_WIDTH, Math.max(MIN_INSPECTOR_WIDTH, inspectorWidth - delta))
-    );
-  }, [inspectorWidth, setInspectorWidth]);
 
   // Handle left panel resize
   const handleLeftPanelResize = useCallback((delta: number) => {
@@ -98,22 +84,47 @@ export function AppShell({
           {/* Left Panel - Preview/JSON Output */}
           {hasSchema && leftTabs.length > 0 && (
             <>
-              <div
-                className="flex-shrink-0 flex flex-col bg-[var(--bg-secondary)]"
-                style={{ width: leftPanelWidth }}
-              >
-                <TabbedPanel
-                  tabs={leftTabs}
-                  activeTab={leftPanelTab}
-                  onTabChange={setLeftPanelTab}
-                  className="h-full"
-                />
-              </div>
+              {isLeftPanelCollapsed ? (
+                /* Collapsed state - thin bar with expand button */
+                <div className="flex-shrink-0 w-12 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col items-center py-2">
+                  <button
+                    onClick={() => setIsLeftPanelCollapsed(false)}
+                    className="p-2 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                    title="Expand Output Panel"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                /* Expanded state */
+                <>
+                  <div
+                    className="flex-shrink-0 flex flex-col bg-[var(--bg-secondary)] relative"
+                    style={{ width: leftPanelWidth }}
+                  >
+                    {/* Collapse button */}
+                    <button
+                      onClick={() => setIsLeftPanelCollapsed(true)}
+                      className="absolute top-2 right-2 z-10 p-1 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                      title="Collapse Output Panel"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
 
-              <ResizableDivider
-                direction="horizontal"
-                onResize={handleLeftPanelResize}
-              />
+                    <TabbedPanel
+                      tabs={leftTabs}
+                      activeTab={leftPanelTab}
+                      onTabChange={setLeftPanelTab}
+                      className="h-full"
+                    />
+                  </div>
+
+                  <ResizableDivider
+                    direction="horizontal"
+                    onResize={handleLeftPanelResize}
+                  />
+                </>
+              )}
             </>
           )}
 
@@ -136,40 +147,6 @@ export function AppShell({
               </div>
             )}
           </div>
-
-          {/* Right Panel - Property Inspector (slides in when component selected) */}
-          {propertyInspector && (
-            <>
-              <ResizableDivider
-                direction="horizontal"
-                onResize={handleInspectorResize}
-              />
-              <div 
-                className="flex-shrink-0 bg-[var(--bg-secondary)] border-l border-[var(--border-color)] flex flex-col overflow-hidden"
-                style={{ width: inspectorWidth }}
-              >
-                {/* Inspector Header */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-                  <div className="flex items-center gap-2">
-                    <svg
-                      className="w-4 h-4 text-[var(--text-secondary)]"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                    </svg>
-                    <span className="text-sm font-medium text-[var(--text-primary)]">Properties</span>
-                  </div>
-                </div>
-                
-                {/* Inspector Content */}
-                <div className="flex-1 overflow-y-auto">
-                  {propertyInspector}
-                </div>
-              </div>
-            </>
-          )}
         </div>
 
         {/* Error Console (Bottom) */}

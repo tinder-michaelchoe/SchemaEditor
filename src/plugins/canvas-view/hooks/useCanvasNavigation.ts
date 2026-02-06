@@ -130,7 +130,7 @@ export function useCanvasNavigation(options: UseCanvasNavigationOptions = {}) {
       const cursorX = e.clientX - rect.left;
       const cursorY = e.clientY - rect.top;
       
-      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      const zoomFactor = e.deltaY > 0 ? 0.97 : 1.03;
       setZoom(state.zoom * zoomFactor, cursorX, cursorY);
     } else {
       // Pan

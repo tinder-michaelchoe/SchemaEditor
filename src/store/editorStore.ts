@@ -290,48 +290,83 @@ export const useEditorStore = create<EditorState>()(
     const { data } = get();
     const sourceArray = getValueAtPath(data, sourcePath);
     const targetArray = getValueAtPath(data, targetPath);
-    
+
     if (!Array.isArray(sourceArray)) {
       console.warn('Cannot move item: source is not an array', sourcePath);
       return;
     }
-    
+
     if (!Array.isArray(targetArray)) {
       console.warn('Cannot move item: target is not an array', targetPath);
       return;
     }
-    
+
     if (sourceIndex < 0 || sourceIndex >= sourceArray.length) {
       console.warn('Invalid source index', { sourceIndex, length: sourceArray.length });
       return;
     }
-    
+
     if (targetIndex < 0 || targetIndex > targetArray.length) {
       console.warn('Invalid target index', { targetIndex, length: targetArray.length });
       return;
     }
 
     get().pushHistory(`Move item from ${pathToString(sourcePath)}[${sourceIndex}] to ${pathToString(targetPath)}[${targetIndex}]`);
-    
+
     // Get the item to move
     const item = sourceArray[sourceIndex];
-    
+
+    // Check if target path contains indices that will shift when we remove from source
+    // This happens when the target path goes through the same array we're removing from
+    let adjustedTargetPath = [...targetPath];
+
+    // Find if source path is a prefix of target path
+    let isTargetDescendantOfSource = true;
+    for (let i = 0; i < sourcePath.length; i++) {
+      if (targetPath[i] !== sourcePath[i]) {
+        isTargetDescendantOfSource = false;
+        break;
+      }
+    }
+
+    // If target is a descendant, adjust any indices after the removed item
+    // The index we need to adjust is at position sourcePath.length in targetPath
+    // because sourcePath points to the array, and the next element is the index into that array
+    if (isTargetDescendantOfSource && sourcePath.length < targetPath.length) {
+      const indexPositionInTarget = sourcePath.length;
+      const indexInTarget = targetPath[indexPositionInTarget];
+
+      if (typeof indexInTarget === 'number' && indexInTarget > sourceIndex) {
+        // This index will shift down after we remove the source item
+        adjustedTargetPath = [...targetPath];
+        adjustedTargetPath[indexPositionInTarget] = indexInTarget - 1;
+        console.log('[moveItemBetweenArrays] Adjusted target path:', {
+          original: targetPath,
+          adjusted: adjustedTargetPath,
+          reason: `Index ${indexInTarget} shifts to ${indexInTarget - 1} after removing index ${sourceIndex}`,
+        });
+      }
+    }
+
     // Remove from source
     const newSourceArray = sourceArray.filter((_, i) => i !== sourceIndex);
     let newData = setValueAtPath(data, sourcePath, newSourceArray);
-    
-    // Get updated target array (in case source and target overlap in the data structure)
-    const updatedTargetArray = getValueAtPath(newData, targetPath);
+
+    // Get updated target array using adjusted path
+    const updatedTargetArray = getValueAtPath(newData, adjustedTargetPath);
     if (!Array.isArray(updatedTargetArray)) {
-      console.warn('Target array no longer exists after removing from source');
+      console.warn('Target array no longer exists after removing from source', {
+        adjustedPath: adjustedTargetPath,
+        originalPath: targetPath,
+      });
       return;
     }
-    
+
     // Insert into target
     const newTargetArray = [...updatedTargetArray];
     newTargetArray.splice(targetIndex, 0, item);
-    newData = setValueAtPath(newData, targetPath, newTargetArray);
-    
+    newData = setValueAtPath(newData, adjustedTargetPath, newTargetArray);
+
     set({ data: newData });
     get().validate();
   },

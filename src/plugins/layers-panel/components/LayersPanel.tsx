@@ -12,6 +12,7 @@ export function LayersPanel() {
     setSelectedPath,
     updateValue,
     moveArrayItem,
+    moveItemBetweenArrays,
   } = useEditorStore();
 
   const {
@@ -68,39 +69,57 @@ export function LayersPanel() {
 
   // Handle reorder via drag and drop
   const handleReorder = useCallback((sourcePath: string, targetPath: string, position: 'before' | 'after' | 'inside') => {
+    console.log('🔄 handleReorder:', { sourcePath, targetPath, position });
+
     // Parse paths to get parent and index
     const sourcePathArray = stringToPath(sourcePath);
     const targetPathArray = stringToPath(targetPath);
-    
+
     // Get source parent path and index
     const sourceIndex = sourcePathArray[sourcePathArray.length - 1] as number;
     const sourceParentPath = sourcePathArray.slice(0, -1);
-    
+
     // Get target parent path and index
     const targetIndex = targetPathArray[targetPathArray.length - 1] as number;
     const targetParentPath = targetPathArray.slice(0, -1);
-    
+
+    console.log('📍 Indices:', { sourceIndex, targetIndex });
+
+    // Determine final target path based on position
+    let finalTargetParentPath = targetParentPath;
+    let finalTargetIndex = targetIndex;
+
+    if (position === 'inside') {
+      // Move inside target (target becomes parent)
+      finalTargetParentPath = [...targetPathArray, 'children'];
+      finalTargetIndex = 0; // Insert at beginning
+    } else if (position === 'after') {
+      finalTargetIndex = targetIndex + 1;
+    }
+    // For 'before': finalTargetIndex stays as targetIndex
+
     // Check if same parent (simple reorder within array)
     const sourceParentStr = pathToString(sourceParentPath);
-    const targetParentStr = pathToString(targetParentPath);
-    
-    if (sourceParentStr === targetParentStr) {
+    const finalTargetParentStr = pathToString(finalTargetParentPath);
+
+    if (sourceParentStr === finalTargetParentStr) {
       // Same parent - reorder within array
-      let newIndex = targetIndex;
-      if (position === 'after') {
-        newIndex = targetIndex + 1;
+      // Note: moveArrayItem in the store already handles the index adjustment
+      // when removing and re-inserting, so we pass finalTargetIndex directly
+
+      console.log('➡️ Moving within same array:', { sourceIndex, toIndex: finalTargetIndex });
+
+      if (sourceIndex !== finalTargetIndex) {
+        moveArrayItem(sourceParentPath, sourceIndex, finalTargetIndex);
+      } else {
+        console.log('⏸️ Skipping - source and target are the same');
       }
-      // Adjust if moving down
-      if (sourceIndex < newIndex) {
-        newIndex--;
-      }
-      
-      if (sourceIndex !== newIndex) {
-        moveArrayItem(sourceParentPath, sourceIndex, newIndex);
-      }
+    } else {
+      // Different parents - move between arrays
+      console.log('↔️ Moving between arrays:', { sourceIndex, targetIndex: finalTargetIndex });
+      moveItemBetweenArrays(sourceParentPath, sourceIndex, finalTargetParentPath, finalTargetIndex);
     }
-    // TODO: Handle moving between different parents
-  }, [moveArrayItem]);
+  }, [moveArrayItem, moveItemBetweenArrays]);
 
   // Expand all layers
   const handleExpandAll = useCallback(() => {

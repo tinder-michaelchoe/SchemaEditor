@@ -9,11 +9,16 @@ interface ComponentCardProps {
 
 export function ComponentCard({ component, onClick }: ComponentCardProps) {
   const { isDragging, dragProps } = useDragSource({
-    type: 'component',
+    type: 'palette-component',
     data: {
       type: component.type,
       name: component.name,
       defaultProps: component.defaultProps,
+    },
+    onDragEnd: (success) => {
+      if (success) {
+        console.log(`Component ${component.name} successfully added to canvas`);
+      }
     },
   });
 

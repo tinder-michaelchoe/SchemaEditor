@@ -2,7 +2,7 @@
  * Main App component using the plugin architecture
  * Integrates all visual editing plugins into a cohesive application
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useEditorStore } from './store/editorStore';
 import { usePersistence } from './plugins/app-shell/hooks/usePersistence';
 import { AppShell } from './plugins/app-shell/components/AppShell';
@@ -13,6 +13,9 @@ import { DragPreview } from './plugins/drag-drop-service/DragPreview';
 import { ErrorConsole } from './components/ErrorConsole';
 import { ImportExport } from './components/ImportExport';
 import type { TabDefinition } from './plugins/app-shell/components/TabbedPanel';
+import { initSchemaParser } from './services/schemaParser';
+import { initDragDropRegistry } from './plugins/drag-drop-service';
+import { initContextMenuRegistry } from './plugins/context-menu/ContextMenuRegistry';
 
 // Wrapper components for tab definitions
 function OutputPanelWrapper() {
@@ -39,6 +42,20 @@ function App() {
 
   const [isErrorConsoleOpen, setIsErrorConsoleOpen] = useState(false);
   const [highlightedErrorLine, setHighlightedErrorLine] = useState<number | null>(null);
+
+  // Initialize schema parser and drag-drop registry when schema is loaded
+  useEffect(() => {
+    if (schema) {
+      try {
+        const parser = initSchemaParser(schema);
+        initDragDropRegistry(parser);
+        initContextMenuRegistry(parser);
+        console.log('[App] Initialized SchemaParser, DragDropRegistry, and ContextMenuRegistry');
+      } catch (error) {
+        console.error('[App] Failed to initialize schema parser:', error);
+      }
+    }
+  }, [schema]);
 
   // Handle errors click
   const handleErrorsClick = useCallback(() => {
@@ -79,11 +96,11 @@ function App() {
     return JSON.stringify(cleanedData, null, 2);
   }, [data, stripEditorProperties]);
 
-  // Define tabs for left panel (Output)
+  // Define tabs for left panel (Output) - no label since OutputPanel has its own Preview/JSON tabs
   const leftTabs: TabDefinition[] = [
     {
       id: 'output',
-      label: 'Output',
+      label: '', // Empty label - OutputPanel has its own Preview/JSON tabs
       component: OutputPanelWrapper,
       priority: 100,
     },
@@ -106,7 +123,6 @@ function App() {
       <AppShell
         leftTabs={leftTabs}
         rightTabs={rightTabs}
-        propertyInspector={selectedPath ? <InspectorPanel /> : null}
         errorConsole={
           schema && (
             <ErrorConsole

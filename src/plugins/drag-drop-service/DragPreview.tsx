@@ -54,33 +54,130 @@ interface DefaultDragPreviewProps {
 }
 
 function DefaultDragPreview({ type, data }: DefaultDragPreviewProps) {
-  const getLabel = () => {
+  const getPreviewContent = () => {
+    // Palette component
+    if (type === 'palette-component') {
+      const componentData = data as { type?: string; name?: string; icon?: string };
+      return {
+        icon: componentData.icon || getComponentIcon(componentData.type),
+        label: componentData.name || componentData.type || 'Component',
+        color: 'var(--accent-color)',
+      };
+    }
+
+    // Layer node (from layer tree)
+    if (type === 'layer-node') {
+      const nodeData = data as { path?: string; type?: string; name?: string; contentPreview?: string | null };
+      const baseLabel = nodeData.name || nodeData.type || 'Layer';
+      const fullLabel = nodeData.contentPreview
+        ? `${baseLabel} "${nodeData.contentPreview}"`
+        : baseLabel;
+      return {
+        icon: getComponentIcon(nodeData.type),
+        label: fullLabel,
+        color: 'var(--accent-color)',
+      };
+    }
+
+    // Canvas node (from canvas)
+    if (type === 'canvas-node') {
+      const nodeData = data as { type?: string; name?: string };
+      return {
+        icon: getComponentIcon(nodeData.type),
+        label: nodeData.name || nodeData.type || 'Component',
+        color: 'var(--accent-color)',
+      };
+    }
+
+    // File drag (images, etc.)
+    if (type === 'file') {
+      const fileData = data as { name?: string; type?: string };
+      return {
+        icon: '📄',
+        label: fileData.name || 'File',
+        color: 'var(--accent-color)',
+      };
+    }
+
+    // Legacy types (backwards compatibility)
     if (type === 'component') {
       const componentData = data as { type?: string; name?: string };
-      return componentData.name || componentData.type || 'Component';
+      return {
+        icon: '📦',
+        label: componentData.name || componentData.type || 'Component',
+        color: 'var(--accent-color)',
+      };
     }
+
     if (type === 'node') {
       const nodeData = data as { path?: string; type?: string };
-      return nodeData.type || nodeData.path || 'Node';
+      return {
+        icon: '🔲',
+        label: nodeData.type || nodeData.path || 'Node',
+        color: 'var(--accent-color)',
+      };
     }
+
     if (type === 'template') {
       const templateData = data as { name?: string };
-      return templateData.name || 'Template';
+      return {
+        icon: '📋',
+        label: templateData.name || 'Template',
+        color: 'var(--accent-color)',
+      };
     }
-    return 'Dragging...';
+
+    return {
+      icon: '🔄',
+      label: 'Dragging...',
+      color: 'var(--accent-color)',
+    };
   };
-  
+
+  const { icon, label, color } = getPreviewContent();
+
   return (
     <div className="
       px-3 py-2 rounded-lg shadow-lg
-      bg-[var(--bg-primary)] border border-[var(--accent-color)]
+      bg-[var(--bg-primary)] border-2
       text-sm font-medium text-[var(--text-primary)]
-      opacity-90
-    ">
+      opacity-95 backdrop-blur-sm
+    "
+      style={{ borderColor: color }}
+    >
       <div className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-[var(--accent-color)]" />
-        {getLabel()}
+        <span className="text-base">{icon}</span>
+        <span>{label}</span>
       </div>
     </div>
   );
+}
+
+/**
+ * Get icon for component type
+ */
+function getComponentIcon(componentType?: string): string {
+  const iconMap: Record<string, string> = {
+    // Layout containers
+    vstack: '⬇️',
+    hstack: '➡️',
+    zstack: '📚',
+
+    // Components
+    label: '📝',
+    button: '🔘',
+    textfield: '📄',
+    image: '🖼️',
+    toggle: '🔘',
+    slider: '🎚️',
+    divider: '➖',
+    spacer: '⬜',
+    gradient: '🌈',
+
+    // Special
+    sectionLayout: '📑',
+    forEach: '🔁',
+  };
+
+  return iconMap[componentType || ''] || '📦';
 }

@@ -178,22 +178,32 @@ export function InspectorPanel() {
     groups.set('General', []);
     groups.set('Layout', []);
     groups.set('Style', []);
-    groups.set('Advanced', []);
 
     const layoutProps = ['spacing', 'padding', 'alignment', 'distribution', 'width', 'height'];
     const styleProps = ['backgroundColor', 'foregroundColor', 'style', 'styleId', 'cornerRadius', 'shadow'];
     const generalProps = ['type', 'id', 'text', 'title', 'name', 'label', 'value', 'image', 'placeholder'];
 
     for (const key of Object.keys(selectedValue)) {
+      // Skip editor-only properties (prefixed with underscore)
+      if (key.startsWith('_')) {
+        continue;
+      }
+
+      // Skip properties handled by dedicated sections
+      // - styleId: handled by Styles panel
+      if (key === 'styleId') {
+        continue;
+      }
+
       if (generalProps.some((p) => key.toLowerCase().includes(p))) {
         groups.get('General')!.push(key);
       } else if (layoutProps.some((p) => key.toLowerCase().includes(p))) {
         groups.get('Layout')!.push(key);
       } else if (styleProps.some((p) => key.toLowerCase().includes(p))) {
         groups.get('Style')!.push(key);
-      } else {
-        groups.get('Advanced')!.push(key);
       }
+      // Note: Properties that don't match any category are intentionally excluded
+      // as they are likely internal or should be handled by custom editors
     }
 
     // Remove empty groups
@@ -224,23 +234,29 @@ export function InspectorPanel() {
 
   return (
     <div className="h-full overflow-y-auto">
-      {/* Header with selected path */}
-      <div className="px-4 py-2 border-b border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-        <p className="text-xs text-[var(--text-tertiary)] truncate" title={selectedPath}>
-          {selectedPath}
-        </p>
-        {valueObj.type && (
-          <p className="text-sm font-medium text-[var(--text-primary)]">
-            {String(valueObj.type)}
-          </p>
-        )}
-      </div>
-
       {/* Property sections */}
       {Array.from(groupedProperties.entries()).map(([group, props]) => (
         <PropertySection key={group} title={group} defaultOpen={group === 'General'}>
+          {/* Add type and path at the top of General section */}
+          {group === 'General' && valueObj.type && (
+            <>
+              <PropertyRow label="type">
+                <span className="text-sm text-[var(--text-primary)] font-mono bg-[var(--bg-tertiary)] px-2 py-1 rounded">
+                  {String(valueObj.type)}
+                </span>
+              </PropertyRow>
+              <PropertyRow label="path">
+                <span className="text-xs text-[var(--text-tertiary)] font-mono bg-[var(--bg-tertiary)] px-2 py-1 rounded break-all block">
+                  {selectedPath}
+                </span>
+              </PropertyRow>
+            </>
+          )}
           {props.map((key) => {
             const propSchema = propertySchema?.properties?.[key];
+            // Skip 'type' since we're rendering it manually above
+            if (key === 'type') return null;
+
             return (
               <PropertyRow
                 key={key}

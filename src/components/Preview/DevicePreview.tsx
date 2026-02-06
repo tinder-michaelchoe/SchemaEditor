@@ -28,6 +28,7 @@ export function DevicePreview({ data, className = '' }: DevicePreviewProps) {
   const [isErrorExpanded, setIsErrorExpanded] = useState(true);
   const [fitToContainer, setFitToContainer] = useState(true);
   const [detentSize, setDetentSize] = useState<DetentSize>('large');
+  const [platform, setPlatform] = useState<'ios' | 'android'>('ios');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize WASM on first mount (lazy loading)
@@ -181,6 +182,24 @@ export function DevicePreview({ data, className = '' }: DevicePreviewProps) {
 
       {/* Phone bezel container */}
       <div className="relative flex-1 flex items-center justify-center p-4 overflow-hidden">
+        {/* Fit button - upper right corner */}
+        <button
+          onClick={() => setFitToContainer(!fitToContainer)}
+          className={`
+            absolute top-2 right-2 z-20
+            flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium
+            transition-colors shadow-sm
+            ${fitToContainer
+              ? 'bg-[var(--accent-color)] text-white'
+              : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] border border-[var(--border-color)]'
+            }
+          `}
+          title={fitToContainer ? 'Use fixed size' : 'Fit to panel'}
+        >
+          <Maximize2 className="w-3 h-3" />
+          Fit
+        </button>
+
         <div 
           className={`relative ${fitToContainer ? 'w-full h-full max-w-full' : 'w-full max-w-[280px]'}`}
           style={{ aspectRatio: fitToContainer ? undefined : '9 / 19.5' }}
@@ -326,23 +345,25 @@ export function DevicePreview({ data, className = '' }: DevicePreviewProps) {
           <option value="medium">Medium Detent</option>
         </select>
 
-        {/* Fit button - lower right corner */}
-        <button
-          onClick={() => setFitToContainer(!fitToContainer)}
-          className={`
+        {/* Platform selector - lower right corner */}
+        <select
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value as 'ios' | 'android')}
+          className="
             absolute bottom-2 right-2 z-20
-            flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium
-            transition-colors shadow-sm
-            ${fitToContainer
-              ? 'bg-[var(--accent-color)] text-white'
-              : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] border border-[var(--border-color)]'
-            }
-          `}
-          title={fitToContainer ? 'Use fixed size' : 'Fit to panel'}
+            px-2 py-1.5 rounded-md text-xs font-medium
+            bg-[var(--bg-primary)] text-[var(--text-secondary)]
+            border border-[var(--border-color)]
+            hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]
+            transition-colors shadow-sm cursor-pointer
+            focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]
+          "
         >
-          <Maximize2 className="w-3 h-3" />
-          Fit
-        </button>
+          <option value="ios">iOS</option>
+          <option value="android" disabled className="text-[var(--text-tertiary)]">
+            Android
+          </option>
+        </select>
       </div>
     </div>
   );

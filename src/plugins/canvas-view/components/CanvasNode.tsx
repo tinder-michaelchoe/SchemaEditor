@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { pathToString } from '@/utils/pathUtils';
 import { useEditorStore } from '@/store/editorStore';
+import { useDragSource } from '@/plugins/drag-drop-service';
 
 // Style definition matching the CLADS schema
 interface StyleDefinition {
@@ -37,6 +38,7 @@ interface CanvasNodeProps {
   onDoubleClick: (path: string, e: React.MouseEvent) => void;
   onHover: (path: string | null) => void;
   onBoundsChange: (path: string, bounds: DOMRect) => void;
+  onContextMenu?: (path: string, x: number, y: number) => void;
   zoom: number;
 }
 
@@ -113,22 +115,33 @@ export function CanvasNode({
   onDoubleClick,
   onHover,
   onBoundsChange,
+  onContextMenu,
   zoom,
 }: CanvasNodeProps) {
   const nodeRef = useRef<HTMLDivElement>(null);
   const pathStr = pathToString(path);
   const nodeType = (node.type as string) || 'unknown';
-  
+
   // Check visibility - default to true if not set
   const isVisible = node._visible !== false;
-  
+
   // Calculate selection state based on path comparison
   const isSelected = selectedPath === pathStr;
   const isHovered = hoveredPath === pathStr;
   const isEditing = editingContainerPath === pathStr;
-  
+
   // Check if locked
   const isLocked = node._locked === true;
+
+  // Enable drag for canvas nodes
+  const { isDragging: isNodeDragging, dragProps } = useDragSource({
+    type: 'canvas-node',
+    data: {
+      path: pathStr,
+      type: nodeType,
+      componentData: node,
+    },
+  });
   
   // Get styles from document
   const data = useEditorStore((state) => state.data);
@@ -175,6 +188,14 @@ export function CanvasNode({
     onHover(null);
   }, [onHover]);
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onContextMenu && !isLocked) {
+      onContextMenu(pathStr, e.clientX, e.clientY);
+    }
+  }, [pathStr, onContextMenu, isLocked]);
+
   // Render based on node type
   const renderContent = () => {
     const commonProps = {
@@ -220,6 +241,7 @@ export function CanvasNode({
     onDoubleClick,
     onHover,
     onBoundsChange,
+    onContextMenu,
     zoom,
   };
 
@@ -231,6 +253,15 @@ export function CanvasNode({
   // Spacer needs to pass flex: 1 to its wrapper
   const wrapperStyle: React.CSSProperties = nodeType === 'spacer' ? { flex: 1 } : {};
 
+  // Override dragProps to add stopPropagation to prevent marquee selection
+  const dragPropsWithStopPropagation = isLocked ? {} : {
+    ...dragProps,
+    onMouseDown: (e: React.MouseEvent) => {
+      e.stopPropagation(); // Prevent marquee selection from starting
+      dragProps.onMouseDown(e);
+    },
+  };
+
   return (
     <div
       ref={nodeRef}
@@ -240,11 +271,17 @@ export function CanvasNode({
       onDoubleClick={isLocked ? undefined : handleDoubleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      style={wrapperStyle}
+      onContextMenu={isLocked ? undefined : handleContextMenu}
+      {...dragPropsWithStopPropagation}
+      style={{
+        ...wrapperStyle,
+        ...(dragProps.style || {}),
+      }}
       className={`
         relative transition-all duration-150 rounded
         ${isEditing ? 'outline outline-2 outline-dashed outline-[var(--accent-color)]/50' : ''}
         ${isLocked ? 'pointer-events-none opacity-75' : ''}
+        ${isNodeDragging ? 'opacity-50' : ''}
       `}
     >
       {renderContent()}
@@ -277,6 +314,7 @@ interface ContainerRendererProps extends RendererProps {
   onDoubleClick: (path: string, e: React.MouseEvent) => void;
   onHover: (path: string | null) => void;
   onBoundsChange: (path: string, bounds: DOMRect) => void;
+  onContextMenu?: (path: string, x: number, y: number) => void;
   zoom: number;
 }
 

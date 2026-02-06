@@ -1,13 +1,13 @@
-import { 
-  Layers, 
-  AlignHorizontalJustifyCenter, 
+import {
+  Layers,
+  AlignHorizontalJustifyCenter,
   AlignVerticalJustifyCenter,
   Layers2,
-  Type, 
-  Image, 
+  Type,
+  Image,
   Paintbrush,
   Minus,
-  MousePointer,
+  RectangleHorizontal,
   TextCursorInput,
   ToggleLeft,
   SlidersHorizontal,
@@ -146,7 +146,7 @@ export const COMPONENT_DEFINITIONS: ComponentDefinition[] = [
     name: 'Button',
     category: 'input',
     description: 'Clickable button',
-    icon: MousePointer,
+    icon: RectangleHorizontal,
     defaultProps: {
       type: 'button',
       text: 'Button',

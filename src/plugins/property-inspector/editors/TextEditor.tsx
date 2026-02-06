@@ -27,11 +27,14 @@ export function TextEditor({
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const newValue = e.target.value;
       setLocalValue(newValue);
+      // Update immediately for real-time feedback
+      onChange(newValue);
     },
-    []
+    [onChange]
   );
 
   const handleBlur = useCallback(() => {
+    // No longer needed since we update on change, but keep for consistency
     if (localValue !== value) {
       onChange(localValue);
     }
@@ -41,12 +44,11 @@ export function TextEditor({
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' && !multiline) {
         e.preventDefault();
-        if (localValue !== value) {
-          onChange(localValue);
-        }
+        // Already updated on change, just blur the input
+        e.currentTarget.blur();
       }
     },
-    [localValue, value, onChange, multiline]
+    [multiline]
   );
 
   if (multiline) {

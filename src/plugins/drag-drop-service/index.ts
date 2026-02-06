@@ -34,10 +34,25 @@ export { manifest };
 export { DragPreview } from './DragPreview';
 export { useDragSource, useDropTarget, useDragState } from './useDragDrop';
 export { useDragDropStore, createDragDropManager } from './DragDropManager';
-export type { 
-  IDragDropManager, 
-  DragSource, 
-  DropTarget, 
+export {
+  DragDropRegistry,
+  getDragDropRegistry,
+  initDragDropRegistry
+} from './DragDropRegistry';
+export {
+  DropZoneOverlay,
+  useDropZoneOverlay,
+} from './components/DropZoneOverlay';
+export { DropZoneLine } from './components/DropZoneLine';
+export { DropZoneHighlight } from './components/DropZoneHighlight';
+export type {
+  IDragDropManager,
+  DragSource,
+  DropTarget,
   DragData,
   DragSourceType,
 } from './DragDropManager';
+export type {
+  DropZoneVisual,
+  ComponentDragConfig,
+} from './DragDropRegistry';

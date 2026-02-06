@@ -13,6 +13,7 @@ export default definePlugin({
 
 export { manifest };
 export { PalettePopover } from './components/PalettePopover';
+export { FloatingPalette } from './components/FloatingPalette';
 export { ComponentCard } from './components/ComponentCard';
 export { CategorySection } from './components/CategorySection';
 export {

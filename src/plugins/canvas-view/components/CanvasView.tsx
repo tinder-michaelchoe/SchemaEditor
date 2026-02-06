@@ -13,20 +13,28 @@ import { CanvasToolbar, DEVICE_FRAMES } from './CanvasToolbar';
 import { CanvasMinimap } from './CanvasMinimap';
 import { LayersPanel } from '@/plugins/layers-panel/components/LayersPanel';
 import { ResizableDivider } from '@/plugins/app-shell/components/ResizableDivider';
-import { stringToPath, getValueAtPath } from '@/utils/pathUtils';
+import { stringToPath, getValueAtPath, pathToString } from '@/utils/pathUtils';
+import { DropZoneOverlay, useDragState } from '@/plugins/drag-drop-service';
+import type { DropZoneVisual } from '@/plugins/drag-drop-service';
+import { useCanvasDropZones } from '../hooks/useCanvasDropZones';
+import { useContextMenu } from '@/plugins/context-menu/hooks/useContextMenu';
+import { ContextMenu } from '@/plugins/context-menu/components/ContextMenu';
+import { FloatingPalette } from '@/plugins/component-palette';
+import { Layers } from 'lucide-react';
 
 type Tool = 'select' | 'hand';
 
 interface CanvasViewProps {
-  paletteSlot?: ReactNode;
+  inspectorPanel?: ReactNode;
 }
 
-export function CanvasView({ paletteSlot }: CanvasViewProps) {
+export function CanvasView({ inspectorPanel }: CanvasViewProps) {
   const {
     data,
     selectedPath,
     setSelectedPath,
     updateValue,
+    addArrayItem,
     removeArrayItem,
     undo,
     redo,
@@ -42,10 +50,16 @@ export function CanvasView({ paletteSlot }: CanvasViewProps) {
     canvasDevice,
     layersPanelWidth,
     isLayersPanelOpen,
+    isLayersPanelCollapsed,
+    isMinimapExpanded,
+    inspectorWidth,
     setCanvasZoom,
     setCanvasPan,
     setCanvasDevice,
     setLayersPanelWidth,
+    setIsLayersPanelCollapsed,
+    setIsMinimapExpanded,
+    setInspectorWidth,
   } = usePersistentUIStore();
 
   const [currentTool, setCurrentTool] = useState<Tool>('select');
@@ -59,6 +73,221 @@ export function CanvasView({ paletteSlot }: CanvasViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const nodeBoundsRef = useRef<Map<string, DOMRect>>(new Map());
+
+  // Drag and drop state
+  const { isDragging, dragData } = useDragState();
+  const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null);
+
+  // Context menu state
+  const {
+    visible: menuVisible,
+    position: menuPosition,
+    actions: menuActions,
+    showMenu,
+    hideMenu,
+    handleAction,
+  } = useContextMenu();
+
+  // Calculate drop zones dynamically based on component bounds
+  const dropZones = useCanvasDropZones({
+    nodeBoundsMap: nodeBoundsRef.current,
+    componentData: data?.root,
+    enabled: isDragging,
+  });
+
+  // Handle drop on canvas drop zone
+  const handleCanvasDrop = useCallback((zoneId: string) => {
+    console.log('[CanvasView] handleCanvasDrop called:', {
+      zoneId,
+      hasDragData: !!dragData,
+      dragDataType: dragData?.source.type,
+    });
+
+    if (!dragData) {
+      console.log('[CanvasView] No dragData, aborting');
+      return;
+    }
+
+    const zone = dropZones.find(z => z.id === zoneId);
+    if (!zone) {
+      console.log('[CanvasView] Zone not found:', zoneId);
+      return;
+    }
+
+    console.log('[CanvasView] Found zone:', {
+      zoneId: zone.id,
+      targetPath: zone.targetPath,
+      position: zone.position,
+      index: zone.index,
+    });
+
+    // Store drag source info before it gets cleared
+    const dragSourceType = dragData.source.type;
+
+    // Handle palette-component drops (adding new components)
+    if (dragData.source.type === 'palette-component') {
+      const componentData = dragData.source.data as {
+        type: string;
+        name: string;
+        defaultProps?: any;
+      };
+
+      // Create the new component
+      const newComponent = {
+        type: componentData.type,
+        ...componentData.defaultProps,
+      };
+
+      // Parse the target path and insert at the correct index
+      const pathParts = zone.targetPath.split('.');
+      const pathArray: (string | number)[] = [];
+
+      for (const part of pathParts) {
+        if (part.includes('[')) {
+          // Handle array notation like "children[0]"
+          const [key, indexStr] = part.split('[');
+          if (key) pathArray.push(key);
+          const index = parseInt(indexStr.replace(']', ''));
+          if (!isNaN(index)) pathArray.push(index);
+        } else {
+          pathArray.push(part);
+        }
+      }
+
+      // Always append 'children' to target the container's children array
+      pathArray.push('children');
+
+      // Get the array at the target path
+      const targetArray = getValueAtPath(data, pathArray);
+
+      if (Array.isArray(targetArray) && zone.index !== undefined) {
+        // Insert at specific index
+        const newArray = [...targetArray];
+        newArray.splice(zone.index, 0, newComponent);
+        updateValue(pathArray, newArray);
+
+        // Select the new component
+        const newComponentPath = [...pathArray, zone.index].join('.');
+        setSelectedPath(newComponentPath);
+      } else {
+        // Append to end
+        addArrayItem(pathArray, newComponent);
+
+        // Select the new component
+        const newIndex = targetArray ? targetArray.length : 0;
+        const newComponentPath = [...pathArray, newIndex].join('.');
+        setSelectedPath(newComponentPath);
+      }
+    }
+
+    // Handle canvas-node drops (reordering existing components)
+    else if (dragData.source.type === 'canvas-node') {
+      console.log('[CanvasView] Handling canvas-node drop (reorder)');
+
+      const sourceData = dragData.source.data as {
+        path: string;
+        type: string;
+        componentData: any;
+      };
+
+      console.log('[CanvasView] Source data:', {
+        path: sourceData.path,
+        type: sourceData.type,
+      });
+
+      const sourcePath = stringToPath(sourceData.path);
+      console.log('[CanvasView] Source path parsed:', sourcePath);
+
+      // Parse the target path
+      const pathParts = zone.targetPath.split('.');
+      const targetPathArray: (string | number)[] = [];
+
+      for (const part of pathParts) {
+        if (part.includes('[')) {
+          const [key, indexStr] = part.split('[');
+          if (key) targetPathArray.push(key);
+          const index = parseInt(indexStr.replace(']', ''));
+          if (!isNaN(index)) targetPathArray.push(index);
+        } else {
+          targetPathArray.push(part);
+        }
+      }
+
+      // Always append 'children' to target the container's children array
+      // zone.targetPath points to the container (e.g., "root.children[0]" for vstack)
+      // We need to append 'children' to get to its children array
+      targetPathArray.push('children');
+
+      console.log('[CanvasView] Target path with children:', targetPathArray);
+
+      // Don't allow dropping onto itself
+      const sourcePathStr = pathToString(sourcePath);
+      const targetPathStr = pathToString(targetPathArray);
+      if (sourcePathStr === targetPathStr && zone.index !== undefined) {
+        // Check if source and target are in the same array
+        const sourceParentPath = sourcePath.slice(0, -1);
+        const sourceIndex = sourcePath[sourcePath.length - 1];
+
+        if (pathToString(sourceParentPath) === targetPathStr &&
+            typeof sourceIndex === 'number' &&
+            sourceIndex === zone.index) {
+          return; // Dropping on same position
+        }
+      }
+
+      // Perform the move
+      const sourceParentPath = sourcePath.slice(0, -2);
+      const sourceArrayKey = sourcePath[sourcePath.length - 2];
+      const sourceIndex = sourcePath[sourcePath.length - 1];
+
+      console.log('[CanvasView] Move details:', {
+        sourceParentPath,
+        sourceArrayKey,
+        sourceIndex,
+        zoneIndex: zone.index,
+      });
+
+      if (typeof sourceIndex === 'number' && zone.index !== undefined) {
+        const sourceArrayPath = [...sourceParentPath, sourceArrayKey];
+
+        console.log('[CanvasView] Source array path:', sourceArrayPath);
+        console.log('[CanvasView] Target array path:', targetPathArray);
+
+        // Check if moving within same array
+        if (pathToString(sourceArrayPath) === targetPathStr) {
+          // Moving within same array - use moveArrayItem
+          console.log('[CanvasView] Moving within same array:', {
+            fromIndex: sourceIndex,
+            toIndex: zone.index,
+          });
+          useEditorStore.getState().moveArrayItem(sourceArrayPath, sourceIndex, zone.index);
+        } else {
+          // Moving between arrays - use moveItemBetweenArrays
+          console.log('[CanvasView] Moving between arrays:', {
+            sourceArray: pathToString(sourceArrayPath),
+            targetArray: targetPathStr,
+            fromIndex: sourceIndex,
+            toIndex: zone.index,
+          });
+          useEditorStore.getState().moveItemBetweenArrays(
+            sourceArrayPath,
+            sourceIndex,
+            targetPathArray,
+            zone.index
+          );
+        }
+
+        // Update selection to new position
+        const newPath = [...targetPathArray, zone.index];
+        console.log('[CanvasView] Move complete, new selection:', pathToString(newPath));
+        setSelectedPath(pathToString(newPath));
+      } else {
+        console.log('[CanvasView] Invalid move - sourceIndex or zone.index is not a number');
+      }
+    } else {
+      console.log('[CanvasView] Unhandled drag source type:', dragData.source.type);
+    }
+  }, [dragData, dropZones, data, updateValue, addArrayItem, setSelectedPath]);
 
   // Get current device frame dimensions
   const currentDevice = DEVICE_FRAMES.find(d => d.id === canvasDevice) || DEVICE_FRAMES[0];
@@ -290,6 +519,15 @@ export function CanvasView({ paletteSlot }: CanvasViewProps) {
     );
   }, [layersPanelWidth, setLayersPanelWidth]);
 
+  // Handle inspector panel resize (negative delta = growing from left)
+  const handleInspectorResize = useCallback((delta: number) => {
+    const MIN_INSPECTOR_WIDTH = 240;
+    const MAX_INSPECTOR_WIDTH = 400;
+    setInspectorWidth(
+      Math.min(MAX_INSPECTOR_WIDTH, Math.max(MIN_INSPECTOR_WIDTH, inspectorWidth - delta))
+    );
+  }, [inspectorWidth, setInspectorWidth]);
+
   // Center the device frame in the viewport
   const handleCenterFrame = useCallback(() => {
     if (!containerRef.current) return;
@@ -356,6 +594,7 @@ export function CanvasView({ paletteSlot }: CanvasViewProps) {
             onDoubleClick={selection.handleNodeDoubleClick}
             onHover={setHoveredPath}
             onBoundsChange={handleBoundsChange}
+            onContextMenu={showMenu}
             zoom={navigation.zoom}
           />
         ))}
@@ -388,7 +627,6 @@ export function CanvasView({ paletteSlot }: CanvasViewProps) {
         selectedDevice={canvasDevice}
         onDeviceChange={setCanvasDevice}
         onCenterFrame={handleCenterFrame}
-        paletteSlot={paletteSlot}
       />
 
       {/* Canvas Content with Layers Panel */}
@@ -396,17 +634,45 @@ export function CanvasView({ paletteSlot }: CanvasViewProps) {
         {/* Layers Panel */}
         {isLayersPanelOpen && (
           <>
-            <div
-              className="flex-shrink-0 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col overflow-hidden"
-              style={{ width: layersPanelWidth }}
-            >
-              <LayersPanel />
-            </div>
+            {isLayersPanelCollapsed ? (
+              /* Collapsed state - thin bar with icon */
+              <div className="flex-shrink-0 w-12 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col items-center py-2">
+                <button
+                  onClick={() => setIsLayersPanelCollapsed(false)}
+                  className="p-2 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                  title="Expand Layers Panel"
+                >
+                  <Layers className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              /* Expanded state */
+              <>
+                <div
+                  className="flex-shrink-0 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col overflow-hidden"
+                  style={{ width: layersPanelWidth }}
+                >
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)]">
+                    <span className="text-sm font-medium text-[var(--text-primary)]">Layers</span>
+                    <button
+                      onClick={() => setIsLayersPanelCollapsed(true)}
+                      className="p-1 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                      title="Collapse Layers Panel"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                  <LayersPanel />
+                </div>
 
-            <ResizableDivider
-              direction="horizontal"
-              onResize={handleLayersPanelResize}
-            />
+                <ResizableDivider
+                  direction="horizontal"
+                  onResize={handleLayersPanelResize}
+                />
+              </>
+            )}
           </>
         )}
 
@@ -557,6 +823,16 @@ export function CanvasView({ paletteSlot }: CanvasViewProps) {
           )}
         </div>
 
+        {/* Drop Zone Overlay - rendered at root level (not inside absolute inset div) */}
+        {isDragging && (
+          <DropZoneOverlay
+            zones={dropZones}
+            visible={isDragging}
+            onZoneHover={setHoveredZoneId}
+            onZoneDrop={handleCanvasDrop}
+          />
+        )}
+
         {/* Minimap */}
         <CanvasMinimap
           zoom={navigation.zoom}
@@ -568,8 +844,44 @@ export function CanvasView({ paletteSlot }: CanvasViewProps) {
           viewportWidth={containerRef.current?.clientWidth || 800}
           viewportHeight={containerRef.current?.clientHeight || 600}
           onPanTo={navigation.setPan}
+          isExpanded={isMinimapExpanded}
+          onToggleExpand={() => setIsMinimapExpanded(!isMinimapExpanded)}
         />
       </div>
+
+        {/* Right Panel - Property Inspector (slides in when component selected) */}
+        {inspectorPanel && (
+          <>
+            <ResizableDivider
+              direction="horizontal"
+              onResize={handleInspectorResize}
+            />
+            <div
+              className="flex-shrink-0 bg-[var(--bg-secondary)] border-l border-[var(--border-color)] flex flex-col overflow-hidden"
+              style={{ width: inspectorWidth }}
+            >
+              {/* Inspector Header */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)] bg-[var(--bg-tertiary)]">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-[var(--text-secondary)]"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  </svg>
+                  <span className="text-sm font-medium text-[var(--text-primary)]">Properties</span>
+                </div>
+              </div>
+
+              {/* Inspector Content */}
+              <div className="flex-1 overflow-y-auto">
+                {inspectorPanel}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -599,6 +911,18 @@ export function CanvasView({ paletteSlot }: CanvasViewProps) {
           </div>
         </div>
       )}
+
+      {/* Context Menu */}
+      <ContextMenu
+        visible={menuVisible}
+        position={menuPosition}
+        actions={menuActions}
+        onActionClick={handleAction}
+        onClose={hideMenu}
+      />
+
+      {/* Floating Component Palette */}
+      <FloatingPalette />
     </div>
   );
 }

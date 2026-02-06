@@ -8,19 +8,20 @@ import { usePersistentUIStore } from '@/plugins/app-shell/hooks/usePersistence';
 
 type TabId = 'preview' | 'json';
 
-// Strip editor-only properties (prefixed with _) from data for display
+// Strip editor-only properties from data for display
 function stripEditorProperties(obj: unknown): unknown {
   if (obj === null || typeof obj !== 'object') {
     return obj;
   }
-  
+
   if (Array.isArray(obj)) {
     return obj.map(stripEditorProperties);
   }
-  
+
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-    // Skip properties starting with underscore (editor-only)
+    // Skip editor-only properties (prefixed with underscore)
+    // Examples: _aspectRatioLocked, _pinnedEdges, _bounds
     if (key.startsWith('_')) {
       continue;
     }
@@ -31,10 +32,10 @@ function stripEditorProperties(obj: unknown): unknown {
 
 export function OutputPanel() {
   const { leftPanelTab, setLeftPanelTab, isJsonWrapEnabled, setIsJsonWrapEnabled } = usePersistentUIStore();
-  
+
   // Use persisted tab, default to 'json' if invalid
-  const activeTab: TabId = (leftPanelTab === 'preview' || leftPanelTab === 'json') 
-    ? leftPanelTab 
+  const activeTab: TabId = (leftPanelTab === 'preview' || leftPanelTab === 'json')
+    ? leftPanelTab
     : 'json';
   
   const {
@@ -85,9 +86,10 @@ export function OutputPanel() {
 
   return (
     <div className="h-full flex flex-col bg-[var(--bg-secondary)]">
-      {/* Tab Header */}
-      <div className="flex items-center justify-between px-2 py-1 border-b border-[var(--border-color)]">
-        <div className="flex items-center gap-1">
+      {/* Tab Header - Centered with improved styling */}
+      <div className="relative flex items-center justify-center px-3 py-2 border-b border-[var(--border-color)] bg-[var(--bg-tertiary)]">
+        {/* Centered Tab Buttons */}
+        <div className="flex items-center gap-1 bg-[var(--bg-secondary)] rounded-lg p-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -95,8 +97,8 @@ export function OutputPanel() {
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 className={`
-                  flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md
-                  transition-colors duration-150
+                  flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md
+                  transition-all duration-200
                   ${activeTab === tab.id
                     ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
@@ -109,10 +111,11 @@ export function OutputPanel() {
             );
           })}
         </div>
-        
-        {/* Expand/Collapse/Reset buttons - only visible for JSON tab */}
+
+        {/* Right-side buttons - positioned on the right */}
         {activeTab === 'json' && (
-          <div className="flex items-center gap-1">
+          <div className="absolute right-3 flex items-center gap-1">
+            {/* Expand/Collapse/Reset buttons - only visible for JSON tab */}
             <Button variant="ghost" size="sm" onClick={expandAll} title="Expand All">
               <ChevronDown className="w-3 h-3" />
             </Button>

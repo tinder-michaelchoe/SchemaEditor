@@ -14,7 +14,10 @@ export interface PersistentUIState {
   isInspectorOpen: boolean;
   isErrorConsoleOpen: boolean;
   isLayersPanelOpen: boolean;
-  
+  isLayersPanelCollapsed: boolean;
+  isLeftPanelCollapsed: boolean;
+  isMinimapExpanded: boolean;
+
   // Active tabs
   leftPanelTab: string;
   rightPanelTab: string;
@@ -51,6 +54,9 @@ export interface PersistentUIState {
   setLayersExpandedPaths: (paths: string[]) => void;
   setLayersPanelWidth: (width: number) => void;
   setIsLayersPanelOpen: (isOpen: boolean) => void;
+  setIsLayersPanelCollapsed: (isCollapsed: boolean) => void;
+  setIsLeftPanelCollapsed: (isCollapsed: boolean) => void;
+  setIsMinimapExpanded: (isExpanded: boolean) => void;
   setIsJsonWrapEnabled: (enabled: boolean) => void;
   setDarkMode: (isDark: boolean) => void;
   setIsInspectorOpen: (isOpen: boolean) => void;
@@ -67,6 +73,9 @@ const DEFAULT_STATE = {
   isInspectorOpen: true,
   isErrorConsoleOpen: false,
   isLayersPanelOpen: true,
+  isLayersPanelCollapsed: false,
+  isLeftPanelCollapsed: false,
+  isMinimapExpanded: false,
   leftPanelTab: 'json', // Default to JSON Output
   rightPanelTab: 'tree',
   canvasZoom: 1,
@@ -97,6 +106,9 @@ export const usePersistentUIStore = create<PersistentUIState>()(
       setLayersExpandedPaths: (paths) => set({ layersExpandedPaths: paths }),
       setLayersPanelWidth: (width) => set({ layersPanelWidth: width }),
       setIsLayersPanelOpen: (isOpen) => set({ isLayersPanelOpen: isOpen }),
+      setIsLayersPanelCollapsed: (isCollapsed) => set({ isLayersPanelCollapsed: isCollapsed }),
+      setIsLeftPanelCollapsed: (isCollapsed) => set({ isLeftPanelCollapsed: isCollapsed }),
+      setIsMinimapExpanded: (isExpanded) => set({ isMinimapExpanded: isExpanded }),
       setIsJsonWrapEnabled: (enabled) => set({ isJsonWrapEnabled: enabled }),
       setDarkMode: (isDark) => set({ isDarkMode: isDark }),
       setIsInspectorOpen: (isOpen) => set({ isInspectorOpen: isOpen }),
@@ -115,6 +127,9 @@ export const usePersistentUIStore = create<PersistentUIState>()(
         isInspectorOpen: state.isInspectorOpen,
         isErrorConsoleOpen: state.isErrorConsoleOpen,
         isLayersPanelOpen: state.isLayersPanelOpen,
+        isLayersPanelCollapsed: state.isLayersPanelCollapsed,
+        isLeftPanelCollapsed: state.isLeftPanelCollapsed,
+        isMinimapExpanded: state.isMinimapExpanded,
         leftPanelTab: state.leftPanelTab,
         rightPanelTab: state.rightPanelTab,
         canvasZoom: state.canvasZoom,

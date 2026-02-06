@@ -1,65 +1,123 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useDragDropStore } from './DragDropManager';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { useDragDropStore, createDragDropManager } from './DragDropManager';
 import type { DragSource, DropTarget, DragData } from './DragDropManager';
+
+// Create a singleton manager instance
+const dragDropManager = createDragDropManager();
+
+// Drag thresholds to prevent accidental drags
+const DRAG_TIME_THRESHOLD = 150; // ms - hold time before drag starts
+const DRAG_DISTANCE_THRESHOLD = 5; // px - distance to move before drag starts
 
 /**
  * Hook for components that can initiate drag operations
  */
 export function useDragSource(source: Omit<DragSource, 'sourcePluginId'>) {
   const [isDragging, setIsDragging] = useState(false);
-  
-  const handleDragStart = useCallback((e: React.DragEvent | React.MouseEvent) => {
+  const [isPending, setIsPending] = useState(false);
+
+  const mouseDownPos = useRef<{ x: number; y: number } | null>(null);
+  const mouseDownTime = useRef<number | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    
+
     const position = {
-      x: 'clientX' in e ? e.clientX : 0,
-      y: 'clientY' in e ? e.clientY : 0,
+      x: e.clientX,
+      y: e.clientY,
     };
-    
-    const dragData: DragData = {
-      source,
-      startPosition: position,
-      currentPosition: position,
-    };
-    
-    useDragDropStore.setState({ dragData });
-    setIsDragging(true);
+
+    mouseDownPos.current = position;
+    mouseDownTime.current = Date.now();
+    setIsPending(true);
+
+    // Set timeout for time threshold
+    timeoutRef.current = setTimeout(() => {
+      if (isPending) {
+        // Time threshold met - start drag
+        dragDropManager.startDrag(source as DragSource, position);
+        setIsDragging(true);
+        setIsPending(false);
+      }
+    }, DRAG_TIME_THRESHOLD);
+  }, [source, isPending]);
+
+  const handlePendingMouseMove = useCallback((e: MouseEvent) => {
+    if (!mouseDownPos.current) return;
+
+    const deltaX = Math.abs(e.clientX - mouseDownPos.current.x);
+    const deltaY = Math.abs(e.clientY - mouseDownPos.current.y);
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    // Distance threshold met - start drag
+    if (distance >= DRAG_DISTANCE_THRESHOLD) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
+      dragDropManager.startDrag(source as DragSource, mouseDownPos.current);
+      setIsDragging(true);
+      setIsPending(false);
+    }
   }, [source]);
-  
-  // Handle mouse move and up globally when dragging
+
+  const handlePendingMouseUp = useCallback(() => {
+    // Mouse released before thresholds met - cancel drag
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsPending(false);
+    mouseDownPos.current = null;
+    mouseDownTime.current = null;
+  }, []);
+
+  // Handle pending state (waiting for threshold)
+  useEffect(() => {
+    if (!isPending) return;
+
+    document.addEventListener('mousemove', handlePendingMouseMove);
+    document.addEventListener('mouseup', handlePendingMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handlePendingMouseMove);
+      document.removeEventListener('mouseup', handlePendingMouseUp);
+    };
+  }, [isPending, handlePendingMouseMove, handlePendingMouseUp]);
+
+  // Handle active drag (threshold met, dragging)
   useEffect(() => {
     if (!isDragging) return;
-    
+
     const handleMouseMove = (e: MouseEvent) => {
-      const { dragData } = useDragDropStore.getState();
-      if (!dragData) return;
-      
-      useDragDropStore.setState({
-        dragData: {
-          ...dragData,
-          currentPosition: { x: e.clientX, y: e.clientY },
-        },
-      });
+      dragDropManager.updatePosition({ x: e.clientX, y: e.clientY });
     };
-    
+
     const handleMouseUp = () => {
+      console.log('[useDragSource] mouseup detected, ending drag');
       setIsDragging(false);
-      useDragDropStore.setState({ dragData: null });
+      mouseDownPos.current = null;
+      mouseDownTime.current = null;
+      // Use the manager's endDrag which calls onDragEnd callback
+      dragDropManager.endDrag();
+      console.log('[useDragSource] endDrag called');
     };
-    
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    
+
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDragging]);
-  
+
   return {
     isDragging,
     dragProps: {
-      onMouseDown: handleDragStart,
+      onMouseDown: handleMouseDown,
       draggable: false, // We handle drag manually
       style: { cursor: 'grab' },
     },
@@ -107,16 +165,17 @@ export function useDropTarget(
   const handleDrop = useCallback((e: React.DragEvent | React.MouseEvent) => {
     e.preventDefault();
     setIsOver(false);
-    
+
     const { dragData } = useDragDropStore.getState();
     if (!dragData || !canDrop) return;
-    
+
     if (onDrop) {
       onDrop(dragData.source);
     }
-    
-    useDragDropStore.setState({ dragData: null });
-  }, [canDrop, onDrop]);
+
+    // Use the manager's handleDrop which calls onDragEnd(true)
+    dragDropManager.handleDrop(target);
+  }, [canDrop, onDrop, target]);
   
   return {
     isOver,

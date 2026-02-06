@@ -1,19 +1,31 @@
 import { create } from 'zustand';
+import type * as React from 'react';
 
 // Types for drag-drop operations
-export type DragSourceType = 'component' | 'node' | 'template';
+export type DragSourceType =
+  | 'layer-node'        // Existing layer in tree
+  | 'palette-component' // New component from palette
+  | 'canvas-node'       // Component on canvas
+  | 'file'              // External file (images, etc.)
+  | 'component'         // Legacy/generic component (backwards compat)
+  | 'node'              // Legacy/generic node (backwards compat)
+  | 'template';         // Legacy/generic template (backwards compat)
 
 export interface DragSource {
   type: DragSourceType;
   data: unknown;
   preview?: React.ReactNode;
   sourcePluginId?: string;
+  sourceId?: string;    // Unique ID for the drag source
+  onDragEnd?: (success: boolean) => void;
 }
 
 export interface DropTarget {
   path: string;
   position: 'before' | 'after' | 'inside';
   accepts?: DragSourceType[];
+  validator?: (source: DragSource) => boolean;  // Custom validation function
+  priority?: number;    // Higher priority wins in overlaps (default: 0)
 }
 
 export interface DragData {
@@ -107,8 +119,17 @@ export function createDragDropManager(): IDragDropManager {
     },
 
     endDrag: () => {
+      const { dragData } = useDragDropStore.getState();
+      console.log('[DragDropManager] endDrag called, current dragData:', dragData ? 'exists' : 'null');
+
+      // Call onDragEnd callback with success=false (cancelled)
+      if (dragData?.source.onDragEnd) {
+        dragData.source.onDragEnd(false);
+      }
+
       useDragDropStore.setState({ dragData: null });
-      
+      console.log('[DragDropManager] dragData cleared');
+
       // Notify listeners
       const { listeners } = useDragDropStore.getState();
       listeners.dragEnd.forEach(cb => cb());
@@ -117,30 +138,40 @@ export function createDragDropManager(): IDragDropManager {
     canDrop: (target) => {
       const { dragData } = useDragDropStore.getState();
       if (!dragData) return false;
-      
+
       // If target specifies accepted types, check if source matches
       if (target.accepts && !target.accepts.includes(dragData.source.type)) {
         return false;
       }
-      
+
+      // Run custom validator if provided
+      if (target.validator && !target.validator(dragData.source)) {
+        return false;
+      }
+
       // Can't drop a node into itself or its descendants
-      if (dragData.source.type === 'node') {
+      if (dragData.source.type === 'node' || dragData.source.type === 'layer-node' || dragData.source.type === 'canvas-node') {
         const sourcePath = dragData.source.data as { path?: string };
         if (sourcePath.path && target.path.startsWith(sourcePath.path)) {
           return false;
         }
       }
-      
+
       return true;
     },
 
     handleDrop: (target) => {
       const { dragData, listeners } = useDragDropStore.getState();
       if (!dragData) return;
-      
+
+      // Call onDragEnd callback with success=true
+      if (dragData.source.onDragEnd) {
+        dragData.source.onDragEnd(true);
+      }
+
       // Notify drop listeners
       listeners.drop.forEach(cb => cb(dragData.source, target));
-      
+
       // End the drag
       useDragDropStore.setState({ dragData: null });
       listeners.dragEnd.forEach(cb => cb());
