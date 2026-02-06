@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useCallback } from 'react';
+import styled, { css } from 'styled-components';
 import { pathToString } from '@/utils/pathUtils';
 import { useEditorStore } from '@/store/editorStore';
 import { useDragSource } from '@/plugins/drag-drop-service';
@@ -45,22 +46,22 @@ interface CanvasNodeProps {
 // Helper to resolve style with inheritance
 function resolveStyle(styleId: string | undefined, styles: Record<string, StyleDefinition>): StyleDefinition {
   if (!styleId || !styles[styleId]) return {};
-  
+
   const style = styles[styleId];
   if (style.inherits && styles[style.inherits]) {
     const parentStyle = resolveStyle(style.inherits, styles);
     return { ...parentStyle, ...style };
   }
-  
+
   return style;
 }
 
 // Convert style definition to CSS properties
 function styleToCss(style: StyleDefinition): React.CSSProperties {
-  const css: React.CSSProperties = {};
-  
-  if (style.fontSize) css.fontSize = style.fontSize;
-  if (style.fontFamily) css.fontFamily = style.fontFamily;
+  const result: React.CSSProperties = {};
+
+  if (style.fontSize) result.fontSize = style.fontSize;
+  if (style.fontFamily) result.fontFamily = style.fontFamily;
   if (style.fontWeight) {
     const weightMap: Record<string, number> = {
       ultraLight: 100,
@@ -73,37 +74,291 @@ function styleToCss(style: StyleDefinition): React.CSSProperties {
       heavy: 800,
       black: 900,
     };
-    css.fontWeight = weightMap[style.fontWeight] || 400;
+    result.fontWeight = weightMap[style.fontWeight] || 400;
   }
-  if (style.textColor) css.color = style.textColor;
+  if (style.textColor) result.color = style.textColor;
   if (style.textAlignment) {
     const alignMap: Record<string, 'left' | 'center' | 'right'> = {
       leading: 'left',
       center: 'center',
       trailing: 'right',
     };
-    css.textAlign = alignMap[style.textAlignment] || 'left';
+    result.textAlign = alignMap[style.textAlignment] || 'left';
   }
-  if (style.backgroundColor) css.backgroundColor = style.backgroundColor;
-  if (style.cornerRadius) css.borderRadius = style.cornerRadius;
-  if (style.borderWidth) css.borderWidth = style.borderWidth;
+  if (style.backgroundColor) result.backgroundColor = style.backgroundColor;
+  if (style.cornerRadius) result.borderRadius = style.cornerRadius;
+  if (style.borderWidth) result.borderWidth = style.borderWidth;
   if (style.borderColor) {
-    css.borderColor = style.borderColor;
-    css.borderStyle = 'solid';
+    result.borderColor = style.borderColor;
+    result.borderStyle = 'solid';
   }
-  if (style.width) css.width = style.width;
-  if (style.height) css.height = style.height;
-  
+  if (style.width) result.width = style.width;
+  if (style.height) result.height = style.height;
+
   if (style.padding) {
     const p = style.padding;
-    css.paddingTop = p.top ?? p.vertical ?? 0;
-    css.paddingBottom = p.bottom ?? p.vertical ?? 0;
-    css.paddingLeft = p.leading ?? p.horizontal ?? 0;
-    css.paddingRight = p.trailing ?? p.horizontal ?? 0;
+    result.paddingTop = p.top ?? p.vertical ?? 0;
+    result.paddingBottom = p.bottom ?? p.vertical ?? 0;
+    result.paddingLeft = p.leading ?? p.horizontal ?? 0;
+    result.paddingRight = p.trailing ?? p.horizontal ?? 0;
   }
-  
-  return css;
+
+  return result;
 }
+
+// ---- Styled Components ----
+
+const NodeWrapper = styled.div<{ $isEditing: boolean; $isLocked: boolean; $isDragging: boolean }>`
+  position: relative;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 4px;
+
+  ${p => p.$isEditing && css`
+    outline: 2px dashed color-mix(in srgb, ${p.theme.colors.accent} 50%, transparent);
+  `}
+
+  ${p => p.$isLocked && css`
+    pointer-events: none;
+    opacity: 0.75;
+  `}
+
+  ${p => p.$isDragging && css`
+    opacity: 0.5;
+  `}
+`;
+
+const LockOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  background-color: rgba(107, 114, 128, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+`;
+
+const LockBadge = styled.div`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: #f97316;
+  color: white;
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 4px;
+`;
+
+const VStackContainer = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  border: 2px dashed rgba(96, 165, 250, 0.5);
+  background-color: rgba(239, 246, 255, 0.1);
+`;
+
+const HStackContainer = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  border-radius: 4px;
+  border: 2px dashed rgba(74, 222, 128, 0.5);
+  background-color: rgba(240, 253, 244, 0.1);
+`;
+
+const ZStackContainer = styled.div`
+  position: relative;
+  border-radius: 4px;
+  border: 2px dashed rgba(192, 132, 252, 0.5);
+  background-color: rgba(250, 245, 255, 0.1);
+`;
+
+const SectionLayoutContainer = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  border: 2px dashed rgba(251, 146, 60, 0.5);
+  background-color: rgba(255, 247, 237, 0.1);
+`;
+
+const ContainerLabel = styled.div<{ $color: string }>`
+  position: absolute;
+  top: -20px;
+  left: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: ${p => p.$color};
+  pointer-events: none;
+`;
+
+const EmptyMessage = styled.div<{ $color: string; $hasFlex?: boolean }>`
+  ${p => p.$hasFlex !== false && css`flex: 1;`}
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${p => p.$color};
+  font-size: 12px;
+  line-height: 16px;
+  padding: 16px 0;
+`;
+
+const LabelWrapper = styled.div`
+  padding: 4px 8px;
+`;
+
+const ButtonWrapper = styled.div`
+  padding: 8px 16px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  text-align: center;
+`;
+
+const ImageContainer = styled.div`
+  background-color: ${p => p.theme.colors.bgTertiary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px dashed ${p => p.theme.colors.border};
+`;
+
+const StyledImage = styled.img`
+  width: 100%;
+  height: 100%;
+`;
+
+const ImagePlaceholder = styled.div<{ $withColor?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+
+  ${p => p.$withColor && css`
+    color: ${p.theme.colors.textTertiary};
+  `}
+`;
+
+const ImageLabel = styled.span`
+  font-size: 10px;
+  color: ${p => p.theme.colors.textTertiary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  padding: 0 4px;
+`;
+
+const TextFieldWrapper = styled.div`
+  padding: 8px 12px;
+  border-width: 1px;
+  border-style: solid;
+  font-size: 14px;
+  line-height: 20px;
+`;
+
+const ToggleTrack = styled.div`
+  width: 48px;
+  height: 28px;
+  border-radius: 9999px;
+  transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+`;
+
+const ToggleThumb = styled.div`
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background-color: white;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1);
+`;
+
+const SpacerBox = styled.div`
+  min-height: 20px;
+  min-width: 20px;
+  background-color: color-mix(in srgb, ${p => p.theme.colors.bgTertiary} 30%, transparent);
+  border-radius: 4px;
+  border: 1px dashed ${p => p.theme.colors.border};
+`;
+
+const DividerLine = styled.div`
+  height: 1px;
+  width: 100%;
+  background-color: ${p => p.theme.colors.border};
+`;
+
+const DefaultBox = styled.div`
+  padding: 8px 12px;
+  background-color: ${p => p.theme.colors.bgTertiary};
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 20px;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const HorizontalScroll = styled.div`
+  overflow-x: auto;
+`;
+
+const HorizontalList = styled.div`
+  display: flex;
+  flex-direction: row;
+`;
+
+const GridContainer = styled.div`
+  display: grid;
+`;
+
+const ListContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const ListDivider = styled.div`
+  height: 1px;
+  background-color: ${p => p.theme.colors.border};
+  margin: 0;
+`;
+
+const EmptyText = styled.div`
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 16px;
+  padding: 16px;
+`;
+
+const GridEmptyText = styled.div`
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 16px;
+  padding: 16px 0;
+  grid-column: 1 / -1;
+`;
+
+const ListEmptyText = styled.div`
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 16px;
+  padding: 16px 0;
+`;
+
+const SectionHeader = styled.div`
+  margin-bottom: 8px;
+`;
+
+const SectionWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+// ---- Components ----
 
 export function CanvasNode({
   node,
@@ -142,11 +397,11 @@ export function CanvasNode({
       componentData: node,
     },
   });
-  
+
   // Get styles from document
   const data = useEditorStore((state) => state.data);
   const documentStyles = (data as Record<string, unknown>)?.styles as Record<string, StyleDefinition> || {};
-  
+
   // Resolve the node's style
   const styleId = node.styleId as string | undefined;
   const resolvedStyle = resolveStyle(styleId, documentStyles);
@@ -155,18 +410,18 @@ export function CanvasNode({
   // Report bounds on mount and resize
   useEffect(() => {
     if (!nodeRef.current) return;
-    
+
     const updateBounds = () => {
       if (nodeRef.current) {
         onBoundsChange(pathStr, nodeRef.current.getBoundingClientRect());
       }
     };
-    
+
     updateBounds();
-    
+
     const observer = new ResizeObserver(updateBounds);
     observer.observe(nodeRef.current);
-    
+
     return () => observer.disconnect();
   }, [pathStr, onBoundsChange]);
 
@@ -204,7 +459,7 @@ export function CanvasNode({
       resolvedStyle,
       documentStyles,
     };
-    
+
     switch (nodeType) {
       case 'vstack':
         return <VStackRenderer {...commonProps} path={path} {...renderProps} />;
@@ -263,8 +518,11 @@ export function CanvasNode({
   };
 
   return (
-    <div
+    <NodeWrapper
       ref={nodeRef}
+      $isEditing={isEditing}
+      $isLocked={isLocked}
+      $isDragging={isNodeDragging}
       data-path={pathStr}
       data-type={nodeType}
       onClick={isLocked ? undefined : handleClick}
@@ -277,23 +535,17 @@ export function CanvasNode({
         ...wrapperStyle,
         ...(dragProps.style || {}),
       }}
-      className={`
-        relative transition-all duration-150 rounded
-        ${isEditing ? 'outline outline-2 outline-dashed outline-[var(--accent-color)]/50' : ''}
-        ${isLocked ? 'pointer-events-none opacity-75' : ''}
-        ${isNodeDragging ? 'opacity-50' : ''}
-      `}
     >
       {renderContent()}
       {/* Lock indicator overlay */}
       {isLocked && (
-        <div className="absolute inset-0 bg-gray-500/10 flex items-center justify-center pointer-events-none">
-          <div className="absolute top-1 right-1 bg-orange-500 text-white text-[10px] px-1 rounded">
+        <LockOverlay>
+          <LockBadge>
             Locked
-          </div>
-        </div>
+          </LockBadge>
+        </LockOverlay>
       )}
-    </div>
+    </NodeWrapper>
   );
 }
 
@@ -324,8 +576,7 @@ function VStackRenderer({ node, path, styleCss, ...props }: ContainerRendererPro
   const padding = node.padding as Record<string, number> | undefined;
 
   return (
-    <div
-      className="relative flex flex-col rounded border-2 border-dashed border-blue-400/50 bg-blue-50/10"
+    <VStackContainer
       style={{
         ...styleCss,
         gap: spacing,
@@ -337,9 +588,9 @@ function VStackRenderer({ node, path, styleCss, ...props }: ContainerRendererPro
       }}
     >
       {/* Container label */}
-      <div className="absolute -top-5 left-1 text-[10px] font-medium text-blue-500/70 pointer-events-none">
+      <ContainerLabel $color="rgba(59, 130, 246, 0.7)">
         VStack
-      </div>
+      </ContainerLabel>
       {children.map((child, index) => (
         <CanvasNode
           key={index}
@@ -349,11 +600,11 @@ function VStackRenderer({ node, path, styleCss, ...props }: ContainerRendererPro
         />
       ))}
       {children.length === 0 && (
-        <div className="flex-1 flex items-center justify-center text-blue-400/60 text-xs py-4">
+        <EmptyMessage $color="rgba(96, 165, 250, 0.6)">
           Drop components here
-        </div>
+        </EmptyMessage>
       )}
-    </div>
+    </VStackContainer>
   );
 }
 
@@ -373,8 +624,7 @@ function HStackRenderer({ node, path, styleCss, ...props }: ContainerRendererPro
   };
 
   return (
-    <div
-      className="relative flex flex-row rounded border-2 border-dashed border-green-400/50 bg-green-50/10"
+    <HStackContainer
       style={{
         ...styleCss,
         gap: spacing,
@@ -387,9 +637,9 @@ function HStackRenderer({ node, path, styleCss, ...props }: ContainerRendererPro
       }}
     >
       {/* Container label */}
-      <div className="absolute -top-5 left-1 text-[10px] font-medium text-green-500/70 pointer-events-none">
+      <ContainerLabel $color="rgba(34, 197, 94, 0.7)">
         HStack
-      </div>
+      </ContainerLabel>
       {children.map((child, index) => (
         <CanvasNode
           key={index}
@@ -399,18 +649,18 @@ function HStackRenderer({ node, path, styleCss, ...props }: ContainerRendererPro
         />
       ))}
       {children.length === 0 && (
-        <div className="flex-1 flex items-center justify-center text-green-400/60 text-xs py-4">
+        <EmptyMessage $color="rgba(74, 222, 128, 0.6)">
           Drop components here
-        </div>
+        </EmptyMessage>
       )}
-    </div>
+    </HStackContainer>
   );
 }
 
 function ZStackRenderer({ node, path, styleCss, ...props }: ContainerRendererProps) {
   const children = (node.children as Record<string, unknown>[]) || [];
   const alignment = (node.alignment as string) || 'center';
-  
+
   // Map alignment to CSS grid properties
   const alignmentStyles: Record<string, { justifyItems: string; alignItems: string }> = {
     topLeading: { justifyItems: 'start', alignItems: 'start' },
@@ -423,12 +673,11 @@ function ZStackRenderer({ node, path, styleCss, ...props }: ContainerRendererPro
     bottom: { justifyItems: 'center', alignItems: 'end' },
     bottomTrailing: { justifyItems: 'end', alignItems: 'end' },
   };
-  
+
   const gridAlignment = alignmentStyles[alignment] || alignmentStyles.center;
 
   return (
-    <div
-      className="relative rounded border-2 border-dashed border-purple-400/50 bg-purple-50/10"
+    <ZStackContainer
       style={{
         ...styleCss,
         display: 'grid',
@@ -442,15 +691,15 @@ function ZStackRenderer({ node, path, styleCss, ...props }: ContainerRendererPro
       }}
     >
       {/* Container label */}
-      <div className="absolute -top-5 left-1 text-[10px] font-medium text-purple-500/70 pointer-events-none z-10">
+      <ContainerLabel $color="rgba(168, 85, 247, 0.7)" style={{ zIndex: 10 }}>
         ZStack
-      </div>
+      </ContainerLabel>
       {/* All children stack in the same grid cell */}
       {children.map((child, index) => (
-        <div 
-          key={index} 
-          style={{ 
-            gridColumn: 1, 
+        <div
+          key={index}
+          style={{
+            gridColumn: 1,
             gridRow: 1,
             zIndex: index + 1, // Later children appear on top
           }}
@@ -463,11 +712,11 @@ function ZStackRenderer({ node, path, styleCss, ...props }: ContainerRendererPro
         </div>
       ))}
       {children.length === 0 && (
-        <div className="flex items-center justify-center text-purple-400/60 text-xs py-4">
+        <EmptyMessage $color="rgba(192, 132, 252, 0.6)" $hasFlex={false}>
           Drop components here
-        </div>
+        </EmptyMessage>
       )}
-    </div>
+    </ZStackContainer>
   );
 }
 
@@ -503,16 +752,14 @@ function SectionLayoutRenderer({ node, path, styleCss, ...props }: ContainerRend
     switch (layout.type) {
       case 'horizontal':
         return (
-          <div
-            className="overflow-x-auto"
+          <HorizontalScroll
             style={{
               paddingLeft: contentInsets.leading ?? contentInsets.horizontal ?? 0,
               paddingRight: contentInsets.trailing ?? contentInsets.horizontal ?? 0,
               scrollbarWidth: layout.showsIndicators === false ? 'none' : 'auto',
             }}
           >
-            <div
-              className="flex flex-row"
+            <HorizontalList
               style={{ gap: itemSpacing }}
             >
               {children.map((child, childIndex) => (
@@ -524,19 +771,18 @@ function SectionLayoutRenderer({ node, path, styleCss, ...props }: ContainerRend
                 />
               ))}
               {children.length === 0 && (
-                <div className="text-gray-400 text-xs py-4 px-4">
+                <EmptyText>
                   Horizontal scroll items here
-                </div>
+                </EmptyText>
               )}
-            </div>
-          </div>
+            </HorizontalList>
+          </HorizontalScroll>
         );
 
       case 'grid':
         const columns = layout.columns || 2;
         return (
-          <div
-            className="grid"
+          <GridContainer
             style={{
               gridTemplateColumns: `repeat(${columns}, 1fr)`,
               gap: `${lineSpacing}px ${itemSpacing}px`,
@@ -553,18 +799,17 @@ function SectionLayoutRenderer({ node, path, styleCss, ...props }: ContainerRend
               />
             ))}
             {children.length === 0 && (
-              <div className="text-gray-400 text-xs py-4 col-span-full">
+              <GridEmptyText>
                 Grid items here
-              </div>
+              </GridEmptyText>
             )}
-          </div>
+          </GridContainer>
         );
 
       case 'list':
       default:
         return (
-          <div
-            className="flex flex-col"
+          <ListContainer
             style={{
               paddingLeft: contentInsets.leading ?? contentInsets.horizontal ?? 0,
               paddingRight: contentInsets.trailing ?? contentInsets.horizontal ?? 0,
@@ -578,23 +823,22 @@ function SectionLayoutRenderer({ node, path, styleCss, ...props }: ContainerRend
                   {...props}
                 />
                 {layout.showsDividers && childIndex < children.length - 1 && (
-                  <div className="h-px bg-[var(--border-color)] my-0" />
+                  <ListDivider />
                 )}
               </React.Fragment>
             ))}
             {children.length === 0 && (
-              <div className="text-gray-400 text-xs py-4">
+              <ListEmptyText>
                 List items here
-              </div>
+              </ListEmptyText>
             )}
-          </div>
+          </ListContainer>
         );
     }
   };
 
   return (
-    <div
-      className="relative flex flex-col rounded border-2 border-dashed border-orange-400/50 bg-orange-50/10"
+    <SectionLayoutContainer
       style={{
         ...styleCss,
         gap: sectionSpacing,
@@ -603,34 +847,34 @@ function SectionLayoutRenderer({ node, path, styleCss, ...props }: ContainerRend
       }}
     >
       {/* Container label */}
-      <div className="absolute -top-5 left-1 text-[10px] font-medium text-orange-500/70 pointer-events-none">
+      <ContainerLabel $color="rgba(249, 115, 22, 0.7)">
         SectionLayout
-      </div>
+      </ContainerLabel>
 
       {sections.map((section, sectionIndex) => (
-        <div key={section.id || sectionIndex} className="flex flex-col">
+        <SectionWrapper key={section.id || sectionIndex}>
           {/* Render section header if present */}
           {section.header && (
-            <div className="mb-2">
+            <SectionHeader>
               <CanvasNode
                 node={section.header}
                 path={[...path, 'sections', sectionIndex, 'header']}
                 {...props}
               />
-            </div>
+            </SectionHeader>
           )}
 
           {/* Render section content based on layout type */}
           {renderSectionContent(section, sectionIndex)}
-        </div>
+        </SectionWrapper>
       ))}
 
       {sections.length === 0 && (
-        <div className="flex-1 flex items-center justify-center text-orange-400/60 text-xs py-4">
+        <EmptyMessage $color="rgba(251, 146, 60, 0.6)">
           Add sections here
-        </div>
+        </EmptyMessage>
       )}
-    </div>
+    </SectionLayoutContainer>
   );
 }
 
@@ -642,9 +886,8 @@ function LabelRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
   const backgroundColor = (node.backgroundColor as string) || resolvedStyle.backgroundColor;
 
   return (
-    <div
-      className="px-2 py-1"
-      style={{ 
+    <LabelWrapper
+      style={{
         ...styleCss,
         fontSize,
         color: textColor || 'inherit',
@@ -652,7 +895,7 @@ function LabelRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
       }}
     >
       {text}
-    </div>
+    </LabelWrapper>
   );
 }
 
@@ -663,8 +906,7 @@ function ButtonRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
   const cornerRadius = (node.cornerRadius as number) || resolvedStyle.cornerRadius;
 
   return (
-    <div
-      className="px-4 py-2 text-sm font-medium text-center"
+    <ButtonWrapper
       style={{
         ...styleCss,
         backgroundColor: backgroundColor || 'transparent',
@@ -673,7 +915,7 @@ function ButtonRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
       }}
     >
       {text}
-    </div>
+    </ButtonWrapper>
   );
 }
 
@@ -686,13 +928,13 @@ function ImageRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
   const cornerRadius = (node.cornerRadius as number) || resolvedStyle.cornerRadius;
   const image = node.image as { type?: string; name?: string; url?: string; _previewUrl?: string } | undefined;
   const padding = node.padding as { top?: number; bottom?: number; leading?: number; trailing?: number } | undefined;
-  
+
   // Layout properties
   const fillWidth = (node.fillWidth as boolean) || false;
   const pinnedEdges = (node._pinnedEdges as string[]) || [];
   const aspectRatioLocked = (node._aspectRatioLocked as boolean) || false;
   const contentMode = (node.contentMode as string) || 'aspectFill';
-  
+
   const imageType = image?.type || 'asset';
   const imageName = image?.name || '';
   const imageUrl = image?.url || '';
@@ -709,15 +951,15 @@ function ImageRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
   // Calculate dimensions - when pinned, stretch to fill
   let width: number | string;
   let height: number | string;
-  
+
   // Horizontal dimension
   if (isHorizontalPinned || fillWidth || !hasExplicitWidth) {
     // When horizontally pinned or no explicit width, stretch to fill
     if (isHorizontalPinned || fillWidth) {
       const leftPadding = padding?.leading ?? 0;
       const rightPadding = padding?.trailing ?? 0;
-      width = leftPadding || rightPadding 
-        ? `calc(100% - ${leftPadding + rightPadding}px)` 
+      width = leftPadding || rightPadding
+        ? `calc(100% - ${leftPadding + rightPadding}px)`
         : '100%';
     } else {
       width = baseWidth; // Fallback to default
@@ -725,15 +967,15 @@ function ImageRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
   } else {
     width = baseWidth;
   }
-  
+
   // Vertical dimension
   if (isVerticalPinned || !hasExplicitHeight) {
     // When vertically pinned or no explicit height, stretch to fill
     if (isVerticalPinned) {
       const topPadding = padding?.top ?? 0;
       const bottomPadding = padding?.bottom ?? 0;
-      height = topPadding || bottomPadding 
-        ? `calc(100% - ${topPadding + bottomPadding}px)` 
+      height = topPadding || bottomPadding
+        ? `calc(100% - ${topPadding + bottomPadding}px)`
         : '100%';
     } else {
       height = baseHeight; // Fallback to default
@@ -771,7 +1013,7 @@ function ImageRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
     marginTop = padding?.top ?? 0;
     marginBottom = padding?.bottom ?? 0;
   }
-  
+
   // Map contentMode to CSS object-fit
   const objectFitMap: Record<string, string> = {
     aspectFit: 'contain',
@@ -784,13 +1026,12 @@ function ImageRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
   const renderContent = () => {
     // Use preview URL if available (local file for visualization)
     const displayUrl = previewUrl || imageUrl;
-    
+
     if (imageType === 'url' && displayUrl) {
       return (
-        <img 
-          src={displayUrl} 
-          alt={imageName || 'Image'} 
-          className="w-full h-full"
+        <StyledImage
+          src={displayUrl}
+          alt={imageName || 'Image'}
           style={{ objectFit: objectFit as 'contain' | 'cover' | 'fill' | 'none' }}
           onError={(e) => {
             // Show placeholder on error
@@ -799,37 +1040,37 @@ function ImageRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
         />
       );
     }
-    
+
     if (imageType === 'system' && imageName) {
       // Show SF Symbol name with icon placeholder
       return (
-        <div className="flex flex-col items-center justify-center gap-1 w-full h-full">
-          <span className="text-2xl">🔷</span>
-          <span className="text-[10px] text-[var(--text-tertiary)] truncate max-w-full px-1">
+        <ImagePlaceholder>
+          <span style={{ fontSize: '1.5rem' }}>&#x1F537;</span>
+          <ImageLabel>
             {imageName}
-          </span>
-        </div>
+          </ImageLabel>
+        </ImagePlaceholder>
       );
     }
-    
+
     if (imageType === 'asset' && imageName) {
       // Show asset name
       return (
-        <div className="flex flex-col items-center justify-center gap-1 w-full h-full">
-          <span className="text-2xl">🖼️</span>
-          <span className="text-[10px] text-[var(--text-tertiary)] truncate max-w-full px-1">
+        <ImagePlaceholder>
+          <span style={{ fontSize: '1.5rem' }}>&#x1F5BC;&#xFE0F;</span>
+          <ImageLabel>
             {imageName}
-          </span>
-        </div>
+          </ImageLabel>
+        </ImagePlaceholder>
       );
     }
-    
+
     // Default placeholder
     return (
-      <div className="flex flex-col items-center justify-center gap-1 w-full h-full text-[var(--text-tertiary)]">
-        <span className="text-2xl">🖼️</span>
-        <span className="text-[10px]">Image</span>
-      </div>
+      <ImagePlaceholder $withColor>
+        <span style={{ fontSize: '1.5rem' }}>&#x1F5BC;&#xFE0F;</span>
+        <span style={{ fontSize: 10 }}>Image</span>
+      </ImagePlaceholder>
     );
   };
 
@@ -839,11 +1080,10 @@ function ImageRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
     : undefined;
 
   return (
-    <div
-      className="bg-[var(--bg-tertiary)] flex items-center justify-center overflow-hidden border border-dashed border-[var(--border-color)]"
-      style={{ 
+    <ImageContainer
+      style={{
         ...styleCss,
-        width, 
+        width,
         height: (isHorizontalPinned || fillWidth) && aspectRatio ? 'auto' : height,
         aspectRatio: (isHorizontalPinned || fillWidth) && aspectRatio ? `${aspectRatio}` : undefined,
         borderRadius: cornerRadius ?? 4,
@@ -855,7 +1095,7 @@ function ImageRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
       }}
     >
       {renderContent()}
-    </div>
+    </ImageContainer>
   );
 }
 
@@ -865,8 +1105,7 @@ function TextFieldRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
   const cornerRadius = (node.cornerRadius as number) || resolvedStyle.cornerRadius;
 
   return (
-    <div
-      className="px-3 py-2 border text-sm"
+    <TextFieldWrapper
       style={{
         ...styleCss,
         backgroundColor: backgroundColor || 'var(--bg-primary)',
@@ -876,7 +1115,7 @@ function TextFieldRenderer({ node, styleCss, resolvedStyle }: RendererProps) {
       }}
     >
       {placeholder}
-    </div>
+    </TextFieldWrapper>
   );
 }
 
@@ -884,25 +1123,22 @@ function ToggleRenderer({ node, styleCss }: RendererProps) {
   const isOn = (node.value as boolean) || false;
 
   return (
-    <div 
-      className="w-12 h-7 rounded-full transition-colors flex items-center px-1"
+    <ToggleTrack
       style={{
         ...styleCss,
         backgroundColor: isOn ? 'var(--accent-color)' : 'var(--bg-tertiary)',
       }}
     >
-      <div 
-        className="w-5 h-5 rounded-full bg-white shadow-sm transition-transform"
+      <ToggleThumb
         style={{ transform: isOn ? 'translateX(20px)' : 'translateX(0)' }}
       />
-    </div>
+    </ToggleTrack>
   );
 }
 
 function SpacerRenderer({ node, styleCss }: RendererProps) {
   return (
-    <div
-      className="min-h-[20px] min-w-[20px] bg-[var(--bg-tertiary)]/30 rounded border border-dashed border-[var(--border-color)]"
+    <SpacerBox
       style={{ ...styleCss, flex: 1 }}
     />
   );
@@ -910,8 +1146,7 @@ function SpacerRenderer({ node, styleCss }: RendererProps) {
 
 function DividerRenderer({ node, styleCss }: RendererProps) {
   return (
-    <div 
-      className="h-px w-full bg-[var(--border-color)]" 
+    <DividerLine
       style={styleCss}
     />
   );
@@ -921,11 +1156,10 @@ function DefaultRenderer({ node, styleCss }: RendererProps) {
   const nodeType = (node.type as string) || 'unknown';
 
   return (
-    <div 
-      className="px-3 py-2 bg-[var(--bg-tertiary)] rounded text-sm text-[var(--text-secondary)]"
+    <DefaultBox
       style={styleCss}
     >
       {nodeType}
-    </div>
+    </DefaultBox>
   );
 }

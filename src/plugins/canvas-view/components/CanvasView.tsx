@@ -21,6 +21,269 @@ import { useContextMenu } from '@/plugins/context-menu/hooks/useContextMenu';
 import { ContextMenu } from '@/plugins/context-menu/components/ContextMenu';
 import { FloatingPalette } from '@/plugins/component-palette';
 import { Layers } from 'lucide-react';
+import styled from 'styled-components';
+
+// ─── Styled Components ───────────────────────────────────────────────────────
+
+const CanvasWrapper = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ContentRow = styled.div`
+  flex: 1;
+  display: flex;
+  min-height: 0;
+`;
+
+const CollapsedLayersBar = styled.div`
+  flex-shrink: 0;
+  width: 3rem;
+  background-color: ${p => p.theme.colors.bgSecondary};
+  border-right: 1px solid ${p => p.theme.colors.border};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+`;
+
+const ExpandButton = styled.button`
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  color: ${p => p.theme.colors.textSecondary};
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+
+  &:hover {
+    background-color: ${p => p.theme.colors.bgPrimary};
+    color: ${p => p.theme.colors.textPrimary};
+  }
+`;
+
+const LayersPanelWrapper = styled.div`
+  flex-shrink: 0;
+  background-color: ${p => p.theme.colors.bgSecondary};
+  border-right: 1px solid ${p => p.theme.colors.border};
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`;
+
+const LayersHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+`;
+
+const LayersTitle = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const CollapseButton = styled.button`
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  color: ${p => p.theme.colors.textSecondary};
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+
+  &:hover {
+    background-color: ${p => p.theme.colors.bgPrimary};
+    color: ${p => p.theme.colors.textPrimary};
+  }
+`;
+
+const CanvasArea = styled.div`
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+`;
+
+const GridOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+`;
+
+const TransformedContent = styled.div`
+  position: absolute;
+  transform-origin: top left;
+`;
+
+const DeviceFrame = styled.div`
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: 3px;
+  overflow: hidden;
+`;
+
+const DeviceLabel = styled.div`
+  position: absolute;
+  top: -1.5rem;
+  left: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+`;
+
+const ContentArea = styled.div`
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+`;
+
+const OverlaysContainer = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+`;
+
+const EmptyStateMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: ${p => p.theme.colors.textTertiary};
+  font-size: 0.875rem;
+`;
+
+const NoComponentsMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: ${p => p.theme.colors.textTertiary};
+  font-size: 0.875rem;
+  padding: 1rem;
+  text-align: center;
+`;
+
+const DocumentContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+`;
+
+const InspectorWrapper = styled.div`
+  flex-shrink: 0;
+  background-color: ${p => p.theme.colors.bgSecondary};
+  border-left: 1px solid ${p => p.theme.colors.border};
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`;
+
+const InspectorHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+  background-color: ${p => p.theme.colors.bgTertiary};
+`;
+
+const InspectorTitleGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const InspectorIcon = styled.svg`
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const InspectorTitle = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const InspectorContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
+`;
+
+const DialogOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+`;
+
+const DialogBox = styled.div`
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  max-width: 24rem;
+  margin-left: 1rem;
+  margin-right: 1rem;
+`;
+
+const DialogTitle = styled.h3`
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+`;
+
+const DialogMessage = styled.p`
+  color: #4b5563;
+  margin-bottom: 1rem;
+`;
+
+const DialogActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+`;
+
+const CancelButton = styled.button`
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  background-color: #f3f4f6;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+
+  &:hover {
+    background-color: #e5e7eb;
+  }
+`;
+
+const DeleteButton = styled.button`
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  background-color: #ef4444;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+
+  &:hover {
+    background-color: #dc2626;
+  }
+`;
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 type Tool = 'select' | 'hand';
 
@@ -562,9 +825,9 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
     
     if (!rootData || typeof rootData !== 'object') {
       return (
-        <div className="flex items-center justify-center h-full text-[var(--text-tertiary)] text-sm">
+        <EmptyStateMessage>
           No document loaded. Load a schema and JSON to see content.
-        </div>
+        </EmptyStateMessage>
       );
     }
 
@@ -573,15 +836,15 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
     
     if (!children || children.length === 0) {
       return (
-        <div className="flex items-center justify-center h-full text-[var(--text-tertiary)] text-sm p-4 text-center">
+        <NoComponentsMessage>
           No components yet.<br />
           Click the Add button to add components.
-        </div>
+        </NoComponentsMessage>
       );
     }
 
     return (
-      <div className="flex flex-col gap-2 p-4">
+      <DocumentContainer>
         {children.map((child, index) => (
           <CanvasNode
             key={index}
@@ -598,7 +861,7 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
             zoom={navigation.zoom}
           />
         ))}
-      </div>
+      </DocumentContainer>
     );
   };
 
@@ -610,7 +873,7 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
   }, [navigation.containerRef]);
 
   return (
-    <div className="h-full flex flex-col">
+    <CanvasWrapper>
       {/* Toolbar */}
       <CanvasToolbar
         currentTool={currentTool}
@@ -630,42 +893,37 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
       />
 
       {/* Canvas Content with Layers Panel */}
-      <div className="flex-1 flex min-h-0">
+      <ContentRow>
         {/* Layers Panel */}
         {isLayersPanelOpen && (
           <>
             {isLayersPanelCollapsed ? (
               /* Collapsed state - thin bar with icon */
-              <div className="flex-shrink-0 w-12 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col items-center py-2">
-                <button
+              <CollapsedLayersBar>
+                <ExpandButton
                   onClick={() => setIsLayersPanelCollapsed(false)}
-                  className="p-2 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                   title="Expand Layers Panel"
                 >
-                  <Layers className="w-5 h-5" />
-                </button>
-              </div>
+                  <Layers size={20} />
+                </ExpandButton>
+              </CollapsedLayersBar>
             ) : (
               /* Expanded state */
               <>
-                <div
-                  className="flex-shrink-0 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col overflow-hidden"
-                  style={{ width: layersPanelWidth }}
-                >
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)]">
-                    <span className="text-sm font-medium text-[var(--text-primary)]">Layers</span>
-                    <button
+                <LayersPanelWrapper style={{ width: layersPanelWidth }}>
+                  <LayersHeader>
+                    <LayersTitle>Layers</LayersTitle>
+                    <CollapseButton
                       onClick={() => setIsLayersPanelCollapsed(true)}
-                      className="p-1 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                       title="Collapse Layers Panel"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg width={16} height={16} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
-                    </button>
-                  </div>
+                    </CollapseButton>
+                  </LayersHeader>
                   <LayersPanel />
-                </div>
+                </LayersPanelWrapper>
 
                 <ResizableDivider
                   direction="horizontal"
@@ -677,10 +935,9 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
         )}
 
         {/* Canvas Area - Light beige/gray background */}
-      <div
+      <CanvasArea
         ref={containerRef}
-        className="flex-1 relative overflow-hidden"
-        style={{ 
+        style={{
           cursor: navigation.cursorStyle,
           backgroundColor: '#e8e4df', // Light warm beige/gray
         }}
@@ -695,8 +952,7 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
       >
         {/* Grid Background */}
         {showGrid && (
-          <div
-            className="absolute inset-0 pointer-events-none"
+          <GridOverlay
             style={{
               backgroundImage: `
                 linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
@@ -706,12 +962,12 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
               backgroundPosition: `${navigation.panX}px ${navigation.panY}px`,
             }}
           />
+
         )}
 
         {/* Transformed Content */}
-        <div
+        <TransformedContent
           ref={contentRef}
-          className="absolute origin-top-left"
           style={{ transform: navigation.transform }}
           onClick={(e) => {
             // Deselect when clicking on transformed content but outside the device frame
@@ -721,8 +977,7 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
           }}
         >
           {/* Device Frame */}
-          <div
-            className="relative shadow-2xl rounded-[3px] overflow-hidden"
+          <DeviceFrame
             style={{
               width: currentDevice.width,
               height: currentDevice.height,
@@ -737,16 +992,12 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
             }}
           >
             {/* Device frame label */}
-            <div 
-              className="absolute -top-6 left-0 text-xs font-medium text-gray-500"
-              style={{ whiteSpace: 'nowrap' }}
-            >
+            <DeviceLabel style={{ whiteSpace: 'nowrap' }}>
               {currentDevice.name} ({currentDevice.width}×{currentDevice.height})
-            </div>
+            </DeviceLabel>
             
             {/* Content area */}
-            <div 
-              className="w-full h-full overflow-hidden"
+            <ContentArea
               onClick={(e) => {
                 // Deselect when clicking on empty content area
                 if (e.target === e.currentTarget) {
@@ -755,12 +1006,12 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
               }}
             >
               {renderDocument()}
-            </div>
-          </div>
-        </div>
+            </ContentArea>
+          </DeviceFrame>
+        </TransformedContent>
 
         {/* Overlays (not transformed) - bounds are already in viewport coords from getBoundingClientRect */}
-        <div className="absolute inset-0 pointer-events-none">
+        <OverlaysContainer>
           {/* Smart guides */}
           <SmartGuides guides={smartGuides.activeGuides} />
 
@@ -821,7 +1072,7 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
               }}
             />
           )}
-        </div>
+        </OverlaysContainer>
 
         {/* Drop Zone Overlay - rendered at root level (not inside absolute inset div) */}
         {isDragging && (
@@ -847,7 +1098,7 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
           isExpanded={isMinimapExpanded}
           onToggleExpand={() => setIsMinimapExpanded(!isMinimapExpanded)}
         />
-      </div>
+      </CanvasArea>
 
         {/* Right Panel - Property Inspector (slides in when component selected) */}
         {inspectorPanel && (
@@ -856,60 +1107,52 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
               direction="horizontal"
               onResize={handleInspectorResize}
             />
-            <div
-              className="flex-shrink-0 bg-[var(--bg-secondary)] border-l border-[var(--border-color)] flex flex-col overflow-hidden"
-              style={{ width: inspectorWidth }}
-            >
+            <InspectorWrapper style={{ width: inspectorWidth }}>
               {/* Inspector Header */}
-              <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-color)] bg-[var(--bg-tertiary)]">
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-4 h-4 text-[var(--text-secondary)]"
+              <InspectorHeader>
+                <InspectorTitleGroup>
+                  <InspectorIcon
+                    width={16}
+                    height={16}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                  </svg>
-                  <span className="text-sm font-medium text-[var(--text-primary)]">Properties</span>
-                </div>
-              </div>
+                  </InspectorIcon>
+                  <InspectorTitle>Properties</InspectorTitle>
+                </InspectorTitleGroup>
+              </InspectorHeader>
 
               {/* Inspector Content */}
-              <div className="flex-1 overflow-y-auto">
+              <InspectorContent>
                 {inspectorPanel}
-              </div>
-            </div>
+              </InspectorContent>
+            </InspectorWrapper>
           </>
         )}
-      </div>
+      </ContentRow>
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <DialogOverlay>
+          <DialogBox>
+            <DialogTitle>
               Delete Component?
-            </h3>
-            <p className="text-gray-600 mb-4">
+            </DialogTitle>
+            <DialogMessage>
               Are you sure you want to delete this component? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={handleCancelDelete}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-              >
+            </DialogMessage>
+            <DialogActions>
+              <CancelButton onClick={handleCancelDelete}>
                 Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-md hover:bg-red-600 transition-colors"
-              >
+              </CancelButton>
+              <DeleteButton onClick={handleConfirmDelete}>
                 Delete
-              </button>
-            </div>
-          </div>
-        </div>
+              </DeleteButton>
+            </DialogActions>
+          </DialogBox>
+        </DialogOverlay>
       )}
 
       {/* Context Menu */}
@@ -923,6 +1166,6 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
 
       {/* Floating Component Palette */}
       <FloatingPalette />
-    </div>
+    </CanvasWrapper>
   );
 }

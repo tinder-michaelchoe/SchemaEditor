@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import styled from 'styled-components';
 import { ResizableDivider } from '@/plugins/app-shell/components/ResizableDivider';
 
 interface SplitViewProps {
@@ -9,6 +10,22 @@ interface SplitViewProps {
   minRightWidth?: number;
   onSplitChange?: (split: number) => void;
 }
+
+const Container = styled.div`
+  display: flex;
+  height: 100%;
+`;
+
+const LeftPanel = styled.div`
+  flex-shrink: 0;
+  overflow: hidden;
+`;
+
+const RightPanel = styled.div`
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+`;
 
 export function SplitView({
   leftPanel,
@@ -39,22 +56,19 @@ export function SplitView({
   }, [minLeftWidth, minRightWidth, onSplitChange]);
 
   return (
-    <div ref={containerRef} className="flex h-full">
+    <Container ref={containerRef}>
       {/* Left Panel */}
-      <div
-        className="flex-shrink-0 overflow-hidden"
-        style={{ width: `${split}%` }}
-      >
+      <LeftPanel style={{ width: `${split}%` }}>
         {leftPanel}
-      </div>
+      </LeftPanel>
 
       {/* Divider */}
       <ResizableDivider direction="horizontal" onResize={handleResize} />
 
       {/* Right Panel */}
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <RightPanel>
         {rightPanel}
-      </div>
-    </div>
+      </RightPanel>
+    </Container>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Lock, Unlock } from 'lucide-react';
+import styled, { css } from 'styled-components';
 
 interface SelectionOverlayProps {
   bounds: {
@@ -30,6 +31,87 @@ export type EdgePin = 'top' | 'bottom' | 'left' | 'right';
 
 const HANDLE_SIZE = 8;
 const SELECTION_COLOR = '#0D99FF';
+
+const OverlayBase = styled.div`
+  position: absolute;
+  pointer-events: none;
+`;
+
+const SelectionBorder = styled.div`
+  position: absolute;
+  inset: 0;
+`;
+
+const InteractiveOverlay = styled.div`
+  position: absolute;
+  pointer-events: auto;
+`;
+
+const HandleWrapper = styled.div`
+  position: absolute;
+  pointer-events: auto;
+`;
+
+const PinButton = styled.button<{ $isPinned: boolean }>`
+  position: absolute;
+  opacity: 0;
+  top: -1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  box-shadow: ${p => p.theme.shadows.sm};
+  transition: opacity 0.15s;
+
+  ${HandleWrapper}:hover & {
+    opacity: 1;
+  }
+
+  ${p => p.$isPinned ? css`
+    background: #0D99FF;
+    color: white;
+    border: none;
+  ` : css`
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+  `}
+`;
+
+const AspectRatioButton = styled.button<{ $locked: boolean }>`
+  position: absolute;
+  pointer-events: auto;
+  bottom: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 10px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+  box-shadow: ${p => p.theme.shadows.sm};
+
+  ${p => p.$locked ? css`
+    background: #0D99FF;
+    color: white;
+    border: none;
+  ` : css`
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    &:hover {
+      background: #f9fafb;
+    }
+  `}
+`;
 
 export function SelectionOverlay({
   bounds,
@@ -212,8 +294,7 @@ export function SelectionOverlay({
   const displayBounds = activeHandle ? currentBounds : bounds;
 
   return (
-    <div
-      className="absolute pointer-events-none"
+    <OverlayBase
       style={{
         left: displayBounds.x,
         top: displayBounds.y,
@@ -222,8 +303,7 @@ export function SelectionOverlay({
       }}
     >
       {/* Selection border */}
-      <div
-        className="absolute inset-0"
+      <SelectionBorder
         style={{
           border: `2px solid ${SELECTION_COLOR}`,
           borderRadius: 2,
@@ -233,8 +313,7 @@ export function SelectionOverlay({
 
       {/* Component type label */}
       {componentType && !isMultiSelect && (
-        <div
-          className="absolute pointer-events-auto"
+        <InteractiveOverlay
           style={{
             top: -24,
             left: 0,
@@ -248,13 +327,12 @@ export function SelectionOverlay({
           }}
         >
           {componentType}
-        </div>
+        </InteractiveOverlay>
       )}
 
       {/* Dimensions tooltip */}
       {!isMultiSelect && (
-        <div
-          className="absolute pointer-events-none"
+        <OverlayBase
           style={{
             bottom: -20,
             right: 0,
@@ -268,7 +346,7 @@ export function SelectionOverlay({
           }}
         >
           {Math.round(displayBounds.width)} × {Math.round(displayBounds.height)}
-        </div>
+        </OverlayBase>
       )}
 
       {/* Resize handles */}
@@ -278,9 +356,8 @@ export function SelectionOverlay({
             const isPinned = isEdge && isEdgePinned(handle);
             
             return (
-              <div
+              <HandleWrapper
                 key={handle}
-                className="absolute pointer-events-auto group"
                 style={{
                   width: HANDLE_SIZE,
                   height: HANDLE_SIZE,
@@ -293,21 +370,12 @@ export function SelectionOverlay({
               >
                 {/* Pin button for edge handles */}
                 {isEdge && onToggleEdgePin && (
-                  <button
-                    className={`
-                      absolute opacity-0 group-hover:opacity-100 transition-opacity
-                      -top-5 left-1/2 -translate-x-1/2
-                      w-4 h-4 rounded-full flex items-center justify-center
-                      text-[8px] shadow-sm
-                      ${isPinned 
-                        ? 'bg-[#0D99FF] text-white' 
-                        : 'bg-white border border-gray-300 text-gray-500'
-                      }
-                    `}
+                  <PinButton
+                    $isPinned={isPinned}
                     onClick={(e) => {
                       e.stopPropagation();
                       const edgeMap: Record<string, EdgePin> = {
-                        'top': 'top', 'bottom': 'bottom', 
+                        'top': 'top', 'bottom': 'bottom',
                         'left': 'left', 'right': 'right',
                       };
                       const edge = edgeMap[handle];
@@ -316,9 +384,9 @@ export function SelectionOverlay({
                     title={isPinned ? `Unpin ${handle} edge` : `Pin to ${handle} edge`}
                   >
                     📌
-                  </button>
+                  </PinButton>
                 )}
-              </div>
+              </HandleWrapper>
             );
           })}
         </>
@@ -326,28 +394,19 @@ export function SelectionOverlay({
 
       {/* Aspect ratio lock button */}
       {showResizeHandles && !isMultiSelect && onToggleAspectRatioLock && (
-        <button
-          className={`
-            absolute pointer-events-auto
-            -bottom-8 left-1/2 -translate-x-1/2
-            px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1
-            transition-colors shadow-sm
-            ${aspectRatioLocked
-              ? 'bg-[#0D99FF] text-white'
-              : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
-            }
-          `}
+        <AspectRatioButton
+          $locked={aspectRatioLocked}
           onClick={(e) => {
             e.stopPropagation();
             onToggleAspectRatioLock();
           }}
           title={aspectRatioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
         >
-          {aspectRatioLocked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+          {aspectRatioLocked ? <Lock size={12} /> : <Unlock size={12} />}
           <span>Ratio</span>
-        </button>
+        </AspectRatioButton>
       )}
-    </div>
+    </OverlayBase>
   );
 }
 
@@ -365,8 +424,7 @@ interface HoverOverlayProps {
 
 export function HoverOverlay({ bounds }: HoverOverlayProps) {
   return (
-    <div
-      className="absolute pointer-events-none"
+    <OverlayBase
       style={{
         left: bounds.x,
         top: bounds.y,
@@ -393,8 +451,7 @@ interface MultiSelectOverlayProps {
 
 export function MultiSelectOverlay({ bounds }: MultiSelectOverlayProps) {
   return (
-    <div
-      className="absolute pointer-events-none"
+    <OverlayBase
       style={{
         left: bounds.x,
         top: bounds.y,
@@ -422,8 +479,7 @@ interface MarqueeOverlayProps {
 
 export function MarqueeOverlay({ bounds }: MarqueeOverlayProps) {
   return (
-    <div
-      className="absolute pointer-events-none"
+    <OverlayBase
       style={{
         left: bounds.x,
         top: bounds.y,

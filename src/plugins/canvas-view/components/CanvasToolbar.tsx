@@ -11,6 +11,7 @@ import {
   Focus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import styled from 'styled-components';
 
 type Tool = 'select' | 'hand';
 
@@ -57,6 +58,51 @@ interface CanvasToolbarProps {
 
 const ZOOM_PRESETS = [0.1, 0.25, 0.5, 1, 2, 4];
 
+const ToolbarWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgSecondary};
+`;
+
+const ToolGroup = styled.div<{ $gap?: number }>`
+  display: flex;
+  align-items: center;
+  gap: ${p => (p.$gap ?? 2)}px;
+`;
+
+const Separator = styled.div`
+  width: 1px;
+  height: 20px;
+  background: ${p => p.theme.colors.border};
+`;
+
+const ToolbarSelect = styled.select`
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: ${p => p.theme.radii.sm};
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+  color: ${p => p.theme.colors.textPrimary};
+
+  &:focus {
+    outline: none;
+    border-color: ${p => p.theme.colors.accent};
+  }
+`;
+
+const IconSecondary = styled.span`
+  display: inline-flex;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const Spacer = styled.div`
+  flex: 1;
+`;
+
 export function CanvasToolbar({
   currentTool,
   onToolChange,
@@ -77,16 +123,16 @@ export function CanvasToolbar({
   const selectedDeviceInfo = DEVICE_FRAMES.find(d => d.id === selectedDevice);
 
   return (
-    <div className="flex items-center gap-2 px-2 py-1 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+    <ToolbarWrapper>
       {/* Tool Selection */}
-      <div className="flex items-center gap-0.5">
+      <ToolGroup>
         <Button
           variant={currentTool === 'select' ? 'secondary' : 'ghost'}
           size="sm"
           onClick={() => onToolChange('select')}
           title="Select (V)"
         >
-          <MousePointer className="w-4 h-4" />
+          <MousePointer size={16} />
         </Button>
         <Button
           variant={currentTool === 'hand' ? 'secondary' : 'ghost'}
@@ -94,24 +140,20 @@ export function CanvasToolbar({
           onClick={() => onToolChange('hand')}
           title="Hand Tool (H)"
         >
-          <Hand className="w-4 h-4" />
+          <Hand size={16} />
         </Button>
-      </div>
+      </ToolGroup>
 
-      <div className="w-px h-5 bg-[var(--border-color)]" />
+      <Separator />
 
       {/* Device Selector */}
-      <div className="flex items-center gap-1">
-        <Smartphone className="w-4 h-4 text-[var(--text-secondary)]" />
-        <select
+      <ToolGroup $gap={4}>
+        <IconSecondary>
+          <Smartphone size={16} />
+        </IconSecondary>
+        <ToolbarSelect
           value={selectedDevice}
           onChange={(e) => onDeviceChange(e.target.value)}
-          className="
-            px-2 py-1 text-xs font-medium rounded
-            bg-[var(--bg-primary)] border border-[var(--border-color)]
-            text-[var(--text-primary)]
-            focus:outline-none focus:border-[var(--accent-color)]
-          "
           title={selectedDeviceInfo ? `${selectedDeviceInfo.width}×${selectedDeviceInfo.height}` : ''}
         >
           {DEVICE_FRAMES.map((device) => (
@@ -119,26 +161,20 @@ export function CanvasToolbar({
               {device.name}
             </option>
           ))}
-        </select>
-      </div>
+        </ToolbarSelect>
+      </ToolGroup>
 
-      <div className="w-px h-5 bg-[var(--border-color)]" />
+      <Separator />
 
       {/* Zoom Controls */}
-      <div className="flex items-center gap-1">
+      <ToolGroup $gap={4}>
         <Button variant="ghost" size="sm" onClick={onZoomOut} title="Zoom Out">
-          <ZoomOut className="w-4 h-4" />
+          <ZoomOut size={16} />
         </Button>
-        
-        <select
+
+        <ToolbarSelect
           value={zoom}
           onChange={(e) => onZoomTo(parseFloat(e.target.value))}
-          className="
-            px-2 py-1 text-xs font-medium rounded
-            bg-[var(--bg-primary)] border border-[var(--border-color)]
-            text-[var(--text-primary)]
-            focus:outline-none focus:border-[var(--accent-color)]
-          "
         >
           {ZOOM_PRESETS.map((preset) => (
             <option key={preset} value={preset}>
@@ -148,32 +184,32 @@ export function CanvasToolbar({
           {!ZOOM_PRESETS.includes(zoom) && (
             <option value={zoom}>{zoomPercent}%</option>
           )}
-        </select>
-        
-        <Button variant="ghost" size="sm" onClick={onZoomIn} title="Zoom In">
-          <ZoomIn className="w-4 h-4" />
-        </Button>
-        
-        <Button variant="ghost" size="sm" onClick={onZoomToFit} title="Zoom to Fit (⌘1)">
-          <Maximize2 className="w-4 h-4" />
-        </Button>
-        
-        <Button variant="ghost" size="sm" onClick={onCenterFrame} title="Center Frame">
-          <Focus className="w-4 h-4" />
-        </Button>
-      </div>
+        </ToolbarSelect>
 
-      <div className="w-px h-5 bg-[var(--border-color)]" />
+        <Button variant="ghost" size="sm" onClick={onZoomIn} title="Zoom In">
+          <ZoomIn size={16} />
+        </Button>
+
+        <Button variant="ghost" size="sm" onClick={onZoomToFit} title="Zoom to Fit (⌘1)">
+          <Maximize2 size={16} />
+        </Button>
+
+        <Button variant="ghost" size="sm" onClick={onCenterFrame} title="Center Frame">
+          <Focus size={16} />
+        </Button>
+      </ToolGroup>
+
+      <Separator />
 
       {/* Grid/Snap Toggles */}
-      <div className="flex items-center gap-0.5">
+      <ToolGroup>
         <Button
           variant={showGrid ? 'secondary' : 'ghost'}
           size="sm"
           onClick={onToggleGrid}
           title="Toggle Grid"
         >
-          <Grid className="w-4 h-4" />
+          <Grid size={16} />
         </Button>
         <Button
           variant={snapEnabled ? 'secondary' : 'ghost'}
@@ -181,12 +217,12 @@ export function CanvasToolbar({
           onClick={onToggleSnap}
           title="Toggle Snap"
         >
-          <Magnet className="w-4 h-4" />
+          <Magnet size={16} />
         </Button>
-      </div>
+      </ToolGroup>
 
       {/* Spacer */}
-      <div className="flex-1" />
-    </div>
+      <Spacer />
+    </ToolbarWrapper>
   );
 }

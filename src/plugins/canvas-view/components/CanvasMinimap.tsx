@@ -1,4 +1,55 @@
 import React, { useCallback } from 'react';
+import styled from 'styled-components';
+
+const MinimapWrapper = styled.div`
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: ${p => p.theme.colors.bgSecondary};
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: ${p => p.theme.radii.lg};
+  box-shadow: ${p => p.theme.shadows.lg};
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 200ms;
+`;
+
+const ContentPreview = styled.div`
+  position: absolute;
+  background: ${p => p.theme.colors.bgTertiary};
+`;
+
+const ViewportIndicator = styled.div`
+  position: absolute;
+  border: 2px solid ${p => p.theme.colors.accent};
+  background: ${p => p.theme.colors.accent}1a;
+`;
+
+const ZoomLabel = styled.div`
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 10px;
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const CollapseButton = styled.button`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 2px;
+  border-radius: ${p => p.theme.radii.sm};
+  border: none;
+  background: ${p => p.theme.colors.bgSecondary}cc;
+  color: ${p => p.theme.colors.textTertiary};
+  cursor: pointer;
+  transition: color 150ms, background 150ms;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgPrimary};
+    color: ${p => p.theme.colors.textPrimary};
+  }
+`;
 
 interface CanvasMinimapProps {
   // Canvas state
@@ -96,21 +147,13 @@ export function CanvasMinimap({
   }, [scale, zoom, viewportWidth, viewportHeight, onPanTo, isExpanded, onToggleExpand, padding]);
 
   return (
-    <div
-      className="
-        absolute bottom-4 right-4
-        bg-[var(--bg-secondary)] border border-[var(--border-color)]
-        rounded-lg shadow-lg overflow-hidden
-        cursor-pointer
-        transition-all duration-200
-      "
+    <MinimapWrapper
       style={{ width: actualWidth, height: actualHeight }}
       onClick={handleClick}
       title={isExpanded ? "Click to pan" : "Click to expand"}
     >
       {/* Content preview (simplified) */}
-      <div
-        className="absolute bg-[var(--bg-tertiary)]"
+      <ContentPreview
         style={{
           left: padding + contentBounds.x * scale,
           top: padding + contentBounds.y * scale,
@@ -121,8 +164,7 @@ export function CanvasMinimap({
       />
 
       {/* Viewport indicator */}
-      <div
-        className="absolute border-2 border-[var(--accent-color)] bg-[var(--accent-color)]/10"
+      <ViewportIndicator
         style={{
           left: viewportRect.x,
           top: viewportRect.y,
@@ -135,25 +177,24 @@ export function CanvasMinimap({
       {/* Zoom level indicator - only show when expanded */}
       {isExpanded && (
         <>
-          <div className="absolute bottom-1 right-1 text-[10px] text-[var(--text-tertiary)]">
+          <ZoomLabel>
             {Math.round(zoom * 100)}%
-          </div>
+          </ZoomLabel>
 
           {/* Collapse button */}
-          <button
-            className="absolute top-1 right-1 p-0.5 rounded bg-[var(--bg-secondary)]/80 hover:bg-[var(--bg-primary)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+          <CollapseButton
             onClick={(e) => {
               e.stopPropagation();
               onToggleExpand();
             }}
             title="Collapse minimap"
           >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg width={12} height={12} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
-          </button>
+          </CollapseButton>
         </>
       )}
-    </div>
+    </MinimapWrapper>
   );
 }

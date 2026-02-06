@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import styled, { css } from 'styled-components';
 import { CanvasView } from './CanvasView';
 import { SplitView } from './SplitView';
 import { SchemaEditor } from '@/components/SchemaEditor';
@@ -11,6 +12,53 @@ type ViewMode = 'tree' | 'canvas' | 'split';
 interface EditorPanelProps {
   defaultViewMode?: ViewMode;
 }
+
+const PanelContainer = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+`;
+
+const TabBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+  background-color: ${p => p.theme.colors.bgSecondary};
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  padding: 6px 12px;
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  border-radius: ${p => p.theme.radii.md};
+  transition: color 150ms, background-color 150ms;
+
+  ${p =>
+    p.$active
+      ? css`
+          background-color: ${p.theme.colors.bgPrimary};
+          color: ${p.theme.colors.textPrimary};
+          box-shadow: ${p.theme.shadows.sm};
+        `
+      : css`
+          background-color: transparent;
+          color: ${p.theme.colors.textSecondary};
+
+          &:hover {
+            color: ${p.theme.colors.textPrimary};
+            background-color: ${p.theme.colors.bgTertiary};
+          }
+        `}
+`;
+
+const ViewContent = styled.div`
+  flex: 1;
+  min-height: 0;
+`;
 
 /**
  * Combined editor panel with Tree, Canvas, and Split view modes
@@ -31,29 +79,22 @@ export function EditorPanel({ defaultViewMode = 'tree' }: EditorPanelProps) {
   }, [setRightPanelTab]);
 
   return (
-    <div className="h-full flex flex-col">
+    <PanelContainer>
       {/* View Mode Tabs */}
-      <div className="flex items-center gap-1 px-2 py-1 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
+      <TabBar>
         {(['tree', 'canvas', 'split'] as const).map((mode) => (
-          <button
+          <TabButton
             key={mode}
+            $active={viewMode === mode}
             onClick={() => handleViewModeChange(mode)}
-            className={`
-              px-3 py-1.5 text-sm font-medium rounded-md
-              transition-colors duration-150
-              ${viewMode === mode
-                ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm'
-                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
-              }
-            `}
           >
             {mode.charAt(0).toUpperCase() + mode.slice(1)}
-          </button>
+          </TabButton>
         ))}
-      </div>
+      </TabBar>
 
       {/* View Content */}
-      <div className="flex-1 min-h-0">
+      <ViewContent>
         {viewMode === 'tree' && <SchemaEditor />}
 
         {viewMode === 'canvas' && <CanvasView inspectorPanel={inspectorPanel} />}
@@ -65,7 +106,7 @@ export function EditorPanel({ defaultViewMode = 'tree' }: EditorPanelProps) {
             initialSplit={50}
           />
         )}
-      </div>
-    </div>
+      </ViewContent>
+    </PanelContainer>
   );
 }

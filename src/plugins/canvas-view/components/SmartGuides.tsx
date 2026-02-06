@@ -1,4 +1,5 @@
 import React from 'react';
+import styled from 'styled-components';
 
 interface Guide {
   type: 'center-x' | 'center-y' | 'left' | 'right' | 'top' | 'bottom';
@@ -14,11 +15,22 @@ interface SmartGuidesProps {
 const CENTER_GUIDE_COLOR = '#FF3366'; // Red for center alignment
 const EDGE_GUIDE_COLOR = '#FF69B4';   // Pink for edge alignment
 
+const GuidesContainer = styled.div`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+`;
+
+const GuideLine = styled.div`
+  position: absolute;
+`;
+
 export function SmartGuides({ guides }: SmartGuidesProps) {
   if (guides.length === 0) return null;
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <GuidesContainer>
       {guides.map((guide, index) => {
         const isCenter = guide.type === 'center-x' || guide.type === 'center-y';
         const color = isCenter ? CENTER_GUIDE_COLOR : EDGE_GUIDE_COLOR;
@@ -26,9 +38,8 @@ export function SmartGuides({ guides }: SmartGuidesProps) {
 
         if (isVertical) {
           return (
-            <div
+            <GuideLine
               key={`${guide.type}-${index}`}
-              className="absolute"
               style={{
                 left: guide.position,
                 top: guide.start,
@@ -40,9 +51,8 @@ export function SmartGuides({ guides }: SmartGuidesProps) {
           );
         } else {
           return (
-            <div
+            <GuideLine
               key={`${guide.type}-${index}`}
-              className="absolute"
               style={{
                 left: guide.start,
                 top: guide.position,
@@ -54,7 +64,7 @@ export function SmartGuides({ guides }: SmartGuidesProps) {
           );
         }
       })}
-    </div>
+    </GuidesContainer>
   );
 }
 
@@ -68,9 +78,43 @@ interface DistanceIndicatorProps {
   direction: 'horizontal' | 'vertical';
 }
 
+const IndicatorContainer = styled.div`
+  position: absolute;
+  pointer-events: none;
+`;
+
+const MeasurementLine = styled.div`
+  position: absolute;
+  background-color: #FF3366;
+`;
+
+const VerticalEndCap = styled.div`
+  position: absolute;
+  width: 1px;
+  height: 8px;
+  background-color: #FF3366;
+`;
+
+const HorizontalEndCap = styled.div`
+  position: absolute;
+  width: 8px;
+  height: 1px;
+  background-color: #FF3366;
+`;
+
+const DistanceLabel = styled.div`
+  position: absolute;
+  padding: 2px 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: white;
+  background-color: #FF3366;
+  border-radius: ${p => p.theme.radii.sm};
+`;
+
 export function DistanceIndicator({ from, to, distance, direction }: DistanceIndicatorProps) {
   const isHorizontal = direction === 'horizontal';
-  
+
   const lineStyle: React.CSSProperties = isHorizontal
     ? {
         left: Math.min(from.x, to.x),
@@ -98,45 +142,27 @@ export function DistanceIndicator({ from, to, distance, direction }: DistanceInd
       };
 
   return (
-    <div className="absolute pointer-events-none">
+    <IndicatorContainer>
       {/* Line */}
-      <div
-        className="absolute bg-[#FF3366]"
-        style={lineStyle}
-      />
-      
+      <MeasurementLine style={lineStyle} />
+
       {/* End caps */}
       {isHorizontal ? (
         <>
-          <div
-            className="absolute w-px h-2 bg-[#FF3366]"
-            style={{ left: from.x, top: from.y - 4 }}
-          />
-          <div
-            className="absolute w-px h-2 bg-[#FF3366]"
-            style={{ left: to.x, top: to.y - 4 }}
-          />
+          <VerticalEndCap style={{ left: from.x, top: from.y - 4 }} />
+          <VerticalEndCap style={{ left: to.x, top: to.y - 4 }} />
         </>
       ) : (
         <>
-          <div
-            className="absolute w-2 h-px bg-[#FF3366]"
-            style={{ left: from.x - 4, top: from.y }}
-          />
-          <div
-            className="absolute w-2 h-px bg-[#FF3366]"
-            style={{ left: to.x - 4, top: to.y }}
-          />
+          <HorizontalEndCap style={{ left: from.x - 4, top: from.y }} />
+          <HorizontalEndCap style={{ left: to.x - 4, top: to.y }} />
         </>
       )}
-      
+
       {/* Distance label */}
-      <div
-        className="absolute px-1 py-0.5 text-[10px] font-medium text-white bg-[#FF3366] rounded"
-        style={labelStyle}
-      >
+      <DistanceLabel style={labelStyle}>
         {Math.round(distance)}px
-      </div>
-    </div>
+      </DistanceLabel>
+    </IndicatorContainer>
   );
 }
