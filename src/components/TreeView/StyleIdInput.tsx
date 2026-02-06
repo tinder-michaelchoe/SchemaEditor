@@ -1,6 +1,50 @@
 import { useMemo, useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { useEditorStore } from '../../store/editorStore';
 import { Input } from '../ui/Input';
+import { disabledStyles } from '@/styles/mixins';
+
+const Wrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const dropdownArrow = `url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2386868b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>')`;
+
+const StyledSelect = styled.select<{ $error?: boolean }>`
+  padding: 0.375rem 0.5rem;
+  padding-right: 2rem;
+  font-size: 0.875rem;
+  min-width: 120px;
+  background-color: ${p => p.theme.colors.bgPrimary};
+  color: ${p => p.theme.colors.textPrimary};
+  border: 1px solid ${p => (p.$error ? p.theme.colors.error : p.theme.colors.border)};
+  border-radius: ${p => p.theme.radii.lg};
+  appearance: none;
+  cursor: pointer;
+  background-image: ${dropdownArrow};
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px ${p => (p.$error ? p.theme.colors.error : p.theme.colors.accent)};
+    border-color: transparent;
+  }
+
+  ${disabledStyles}
+`;
+
+const FlexInput = styled(Input)`
+  flex: 1;
+`;
+
+const StyleHint = styled.span`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+  padding: 0 0.5rem;
+`;
 
 interface StyleIdInputProps {
   value: string;
@@ -13,7 +57,7 @@ const CUSTOM_OPTION = '__custom__';
 
 export function StyleIdInput({ value, onChange, error, disabled }: StyleIdInputProps) {
   const { data } = useEditorStore();
-  
+
   // Get defined styles from the document
   const definedStyles = useMemo(() => {
     if (!data || typeof data !== 'object') return [];
@@ -40,7 +84,7 @@ export function StyleIdInput({ value, onChange, error, disabled }: StyleIdInputP
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = e.target.value;
-    
+
     if (selected === CUSTOM_OPTION) {
       setIsCustomMode(true);
       // Keep current value or clear it
@@ -56,7 +100,7 @@ export function StyleIdInput({ value, onChange, error, disabled }: StyleIdInputP
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     onChange(newValue);
-    
+
     // If user types a defined style name, switch out of custom mode
     if (definedStyles.includes(newValue)) {
       setIsCustomMode(false);
@@ -72,26 +116,12 @@ export function StyleIdInput({ value, onChange, error, disabled }: StyleIdInputP
   }, [value, isCustomMode, definedStyles]);
 
   return (
-    <div className="flex items-center gap-2">
-      <select
+    <Wrapper>
+      <StyledSelect
         value={selectValue}
         onChange={handleSelectChange}
         disabled={disabled}
-        className={`
-          px-2 py-1.5 text-sm min-w-[120px]
-          bg-[var(--bg-primary)] text-[var(--text-primary)]
-          border rounded-lg
-          focus:outline-none focus:ring-2 focus:ring-[var(--accent-color)] focus:border-transparent
-          disabled:opacity-50 disabled:cursor-not-allowed
-          appearance-none cursor-pointer
-          bg-[url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2386868b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>')] 
-          bg-no-repeat bg-[right_8px_center]
-          pr-8
-          ${error 
-            ? 'border-[var(--error-color)] focus:ring-[var(--error-color)]' 
-            : 'border-[var(--border-color)]'
-          }
-        `}
+        $error={error}
       >
         <option value="">-- None --</option>
         {definedStyles.length > 0 && (
@@ -104,25 +134,24 @@ export function StyleIdInput({ value, onChange, error, disabled }: StyleIdInputP
           </optgroup>
         )}
         <option value={CUSTOM_OPTION}>Custom...</option>
-      </select>
-      
+      </StyledSelect>
+
       {(isCustomMode || selectValue === CUSTOM_OPTION) && (
-        <Input
+        <FlexInput
           type="text"
           value={value || ''}
           onChange={handleInputChange}
           placeholder="@design.style or customStyle"
           error={error}
           disabled={disabled}
-          className="flex-1"
         />
       )}
-      
+
       {!isCustomMode && selectValue !== CUSTOM_OPTION && value && (
-        <span className="text-xs text-[var(--text-tertiary)] px-2">
+        <StyleHint>
           {value.startsWith('@') ? '(design system)' : '(local style)'}
-        </span>
+        </StyleHint>
       )}
-    </div>
+    </Wrapper>
   );
 }

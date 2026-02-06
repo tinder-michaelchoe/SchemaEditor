@@ -1,8 +1,90 @@
 import React, { useState, useCallback } from 'react';
+import styled, { css } from 'styled-components';
 import { useDragDropStore } from '@/plugins/drag-drop-service/DragDropManager';
 import type { DragSource } from '@/plugins/drag-drop-service/DragDropManager';
 
 export type DropPosition = 'before' | 'after' | 'inside';
+
+/* ── Styled Components ── */
+
+const DropZoneContainer = styled.div`
+  position: relative;
+  transition: all 0.15s;
+`;
+
+const DropIndicator = styled.div<{
+  $position: DropPosition;
+  $isOver: boolean;
+  $canAccept: boolean;
+}>`
+  position: absolute;
+  pointer-events: none;
+  transition: all 0.15s;
+
+  ${p => p.$position === 'before' && css`
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 0.125rem;
+  `}
+
+  ${p => p.$position === 'after' && css`
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0.125rem;
+  `}
+
+  ${p => p.$position === 'inside' && css`
+    inset: 0;
+    border-radius: ${p.theme.radii.md};
+    border: 2px dashed;
+  `}
+
+  ${p => p.$isOver && p.$canAccept && p.$position === 'inside' && css`
+    border-color: ${p.theme.colors.accent};
+    background: ${p.theme.colors.accent}1a;
+  `}
+
+  ${p => p.$isOver && p.$canAccept && p.$position !== 'inside' && css`
+    background: ${p.theme.colors.accent};
+  `}
+
+  ${p => !p.$isOver && p.$canAccept && p.$position === 'inside' && css`
+    border-color: ${p.theme.colors.border};
+  `}
+
+  ${p => !p.$isOver && p.$canAccept && p.$position !== 'inside' && css`
+    background: transparent;
+  `}
+
+  ${p => !p.$canAccept && css`
+    border-color: transparent;
+    background: transparent;
+  `}
+`;
+
+const DroppableContainer = styled.div`
+  position: relative;
+`;
+
+const BeforeAfterZone = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0.5rem;
+  z-index: 10;
+`;
+
+const BeforeZone = styled(BeforeAfterZone)`
+  top: -0.25rem;
+`;
+
+const AfterZone = styled(BeforeAfterZone)`
+  bottom: -0.25rem;
+`;
+
+/* ── DropZone Component ── */
 
 interface DropZoneProps {
   path: string;
@@ -19,13 +101,13 @@ export function DropZone({
   position,
   accepts = ['component', 'node'],
   onDrop,
-  className = '',
+  className,
   children,
   showIndicator = true,
 }: DropZoneProps) {
   const [isOver, setIsOver] = useState(false);
   const dragData = useDragDropStore((state) => state.dragData);
-  
+
   const isDragging = dragData !== null;
   const canAccept = isDragging && accepts.includes(dragData.source.type);
 
@@ -53,39 +135,23 @@ export function DropZone({
   }
 
   return (
-    <div
+    <DropZoneContainer
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseUp={handleMouseUp}
-      className={`
-        relative transition-all duration-150
-        ${className}
-      `}
+      className={className}
     >
       {children}
-      
+
       {/* Drop indicator */}
       {showIndicator && isDragging && (
-        <div
-          className={`
-            absolute pointer-events-none transition-all duration-150
-            ${position === 'before' ? 'top-0 left-0 right-0 h-0.5' : ''}
-            ${position === 'after' ? 'bottom-0 left-0 right-0 h-0.5' : ''}
-            ${position === 'inside' ? 'inset-0 rounded-md border-2 border-dashed' : ''}
-            ${isOver && canAccept
-              ? position === 'inside'
-                ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10'
-                : 'bg-[var(--accent-color)]'
-              : canAccept
-                ? position === 'inside'
-                  ? 'border-[var(--border-color)]'
-                  : 'bg-transparent'
-                : ''
-            }
-          `}
+        <DropIndicator
+          $position={position}
+          $isOver={isOver}
+          $canAccept={canAccept}
         />
       )}
-    </div>
+    </DropZoneContainer>
   );
 }
 
@@ -109,21 +175,20 @@ export function DroppableWrapper({
   children,
   showBeforeAfter = true,
   showInside = false,
-  className = '',
+  className,
 }: DroppableWrapperProps) {
   const dragData = useDragDropStore((state) => state.dragData);
   const isDragging = dragData !== null;
 
   return (
-    <div className={`relative ${className}`}>
+    <DroppableContainer className={className}>
       {/* Before drop zone */}
       {showBeforeAfter && isDragging && (
-        <DropZone
+        <BeforeZone as={DropZone}
           path={path}
           position="before"
           accepts={accepts}
           onDrop={onDrop}
-          className="absolute -top-1 left-0 right-0 h-2 z-10"
         />
       )}
 
@@ -143,14 +208,13 @@ export function DroppableWrapper({
 
       {/* After drop zone */}
       {showBeforeAfter && isDragging && (
-        <DropZone
+        <AfterZone as={DropZone}
           path={path}
           position="after"
           accepts={accepts}
           onDrop={onDrop}
-          className="absolute -bottom-1 left-0 right-0 h-2 z-10"
         />
       )}
-    </div>
+    </DroppableContainer>
   );
 }

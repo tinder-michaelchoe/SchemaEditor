@@ -1,20 +1,35 @@
+import styled from 'styled-components';
 import { Badge } from '../ui/Badge';
 
 interface ConstNodeProps {
   value: unknown;
 }
 
+const Wrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+`;
+
+const CodeValue = styled.code`
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-family: ${p => p.theme.fonts.mono};
+  color: ${p => p.theme.colors.textPrimary};
+  background: ${p => p.theme.colors.bgTertiary};
+  padding: 0.125rem 0.5rem;
+  border-radius: ${p => p.theme.radii.sm};
+`;
+
 export function ConstNode({ value }: ConstNodeProps) {
-  const displayValue = typeof value === 'string' 
-    ? `"${value}"` 
+  const displayValue = typeof value === 'string'
+    ? `"${value}"`
     : JSON.stringify(value);
 
   return (
-    <div className="flex items-center gap-2 py-1">
-      <code className="text-sm font-mono text-[var(--text-primary)] bg-[var(--bg-tertiary)] px-2 py-0.5 rounded">
-        {displayValue}
-      </code>
+    <Wrapper>
+      <CodeValue>{displayValue}</CodeValue>
       <Badge variant="type">const</Badge>
-    </div>
+    </Wrapper>
   );
 }

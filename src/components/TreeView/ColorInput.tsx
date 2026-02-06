@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import styled from 'styled-components';
 import { Palette } from 'lucide-react';
 import { Input } from '../ui/Input';
 
@@ -32,7 +33,7 @@ function saveRecentColor(color: string): string[] {
   if (!color || !/^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(color)) {
     return loadRecentColors();
   }
-  
+
   try {
     let recent = loadRecentColors();
     // Remove if already exists (to move to front)
@@ -57,7 +58,7 @@ const COLOR_PALETTE = [
   { name: 'Gray', hex: '#8E8E93' },
   { name: 'Light Gray', hex: '#C7C7CC' },
   { name: 'White', hex: '#FFFFFF' },
-  
+
   // Primary colors
   { name: 'Red', hex: '#FF3B30' },
   { name: 'Orange', hex: '#FF9500' },
@@ -71,7 +72,7 @@ const COLOR_PALETTE = [
   { name: 'Purple', hex: '#AF52DE' },
   { name: 'Pink', hex: '#FF2D55' },
   { name: 'Brown', hex: '#A2845E' },
-  
+
   // Semantic colors
   { name: 'Label', hex: '#000000' },
   { name: 'Secondary Label', hex: '#3C3C4399' },
@@ -79,7 +80,7 @@ const COLOR_PALETTE = [
   { name: 'System Background', hex: '#FFFFFF' },
   { name: 'Secondary Background', hex: '#F2F2F7' },
   { name: 'Grouped Background', hex: '#F2F2F7' },
-  
+
   // Additional useful colors
   { name: 'Clear', hex: '#00000000' },
   { name: 'Accent Blue', hex: '#0A84FF' },
@@ -87,6 +88,159 @@ const COLOR_PALETTE = [
   { name: 'Warning', hex: '#FFD60A' },
   { name: 'Error', hex: '#FF453A' },
 ];
+
+/* ── Styled Components ──────────────────────────────────────────── */
+
+const Container = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const ColorPreviewButton = styled.button`
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  border: 2px solid ${p => p.theme.colors.border};
+  transition: border-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+
+  &:hover {
+    border-color: ${p => p.theme.colors.accent};
+  }
+`;
+
+const ColorPreviewInner = styled.div`
+  width: 100%;
+  height: 100%;
+`;
+
+const StyledPalette = styled(Palette)`
+  color: ${p => p.theme.colors.textSecondary};
+  margin: auto;
+  margin-top: 0.375rem;
+`;
+
+const StyledInput = styled(Input)`
+  flex: 1;
+  font-family: ${p => p.theme.fonts.mono};
+`;
+
+const Popover = styled.div`
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 0.25rem;
+  z-index: 50;
+  background-color: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 0.75rem;
+  box-shadow: ${p => p.theme.shadows.xl};
+  padding: 0.75rem;
+  width: 280px;
+`;
+
+const SectionLabel = styled.div<{ $mt?: boolean }>`
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textSecondary};
+  margin-bottom: 0.5rem;
+  ${p => p.$mt && 'margin-top: 0.75rem;'}
+`;
+
+const ColorGrid = styled.div<{ $mb?: boolean }>`
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.375rem;
+  ${p => p.$mb && 'margin-bottom: 0.75rem;'}
+`;
+
+const SwatchButton = styled.button`
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  border: 1px solid ${p => p.theme.colors.border};
+  transition: all 0.15s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+
+  &:hover {
+    transform: scale(1.1);
+    border-color: ${p => p.theme.colors.accent};
+  }
+`;
+
+const SwatchOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+`;
+
+const SelectionIndicatorContainer = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const SelectionDot = styled.div`
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: white;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: ${p => p.theme.shadows.sm};
+`;
+
+const CurrentValueSection = styled.div`
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid ${p => p.theme.colors.border};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const CurrentValueSwatch = styled.div`
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid ${p => p.theme.colors.border};
+`;
+
+const CurrentValueText = styled.span`
+  font-size: 0.75rem;
+  font-family: ${p => p.theme.fonts.mono};
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+/* ── Checkerboard background inline styles ──────────────────────── */
+
+const checkerboardSmall = {
+  background: `linear-gradient(45deg, #ccc 25%, transparent 25%),
+               linear-gradient(-45deg, #ccc 25%, transparent 25%),
+               linear-gradient(45deg, transparent 75%, #ccc 75%),
+               linear-gradient(-45deg, transparent 75%, #ccc 75%)`,
+  backgroundSize: '6px 6px',
+  backgroundPosition: '0 0, 0 3px, 3px -3px, -3px 0px',
+};
+
+const checkerboardLarge = {
+  backgroundSize: '8px 8px',
+  backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
+};
+
+/* ── Component ──────────────────────────────────────────────────── */
 
 export function ColorInput({ value, onChange, placeholder }: ColorInputProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -142,43 +296,37 @@ export function ColorInput({ value, onChange, placeholder }: ColorInputProps) {
   const isValidColor = /^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(value);
 
   return (
-    <div ref={containerRef} className="relative flex items-center gap-2">
+    <Container ref={containerRef}>
       {/* Color preview button */}
-      <button
+      <ColorPreviewButton
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="
-          flex-shrink-0 w-8 h-8 rounded-lg border-2 
-          border-[var(--border-color)] hover:border-[var(--accent-color)]
-          transition-colors flex items-center justify-center
-          overflow-hidden
-        "
-        style={{
-          background: isValidColor 
-            ? `linear-gradient(45deg, #ccc 25%, transparent 25%), 
-               linear-gradient(-45deg, #ccc 25%, transparent 25%), 
-               linear-gradient(45deg, transparent 75%, #ccc 75%), 
-               linear-gradient(-45deg, transparent 75%, #ccc 75%)`
-            : undefined,
-          backgroundSize: '8px 8px',
-          backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
-        }}
+        style={
+          isValidColor
+            ? {
+                background: `linear-gradient(45deg, #ccc 25%, transparent 25%),
+                   linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                   linear-gradient(45deg, transparent 75%, #ccc 75%),
+                   linear-gradient(-45deg, transparent 75%, #ccc 75%)`,
+                ...checkerboardLarge,
+              }
+            : undefined
+        }
         title="Choose color"
       >
-        <div 
-          className="w-full h-full"
-          style={{ 
+        <ColorPreviewInner
+          style={{
             backgroundColor: isValidColor ? currentColor : 'transparent',
           }}
         >
           {!isValidColor && (
-            <Palette className="w-4 h-4 text-[var(--text-secondary)] m-auto mt-1.5" />
+            <StyledPalette size={16} />
           )}
-        </div>
-      </button>
+        </ColorPreviewInner>
+      </ColorPreviewButton>
 
       {/* Text input */}
-      <Input
+      <StyledInput
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={() => {
@@ -189,160 +337,94 @@ export function ColorInput({ value, onChange, placeholder }: ColorInputProps) {
           }
         }}
         placeholder={placeholder || '#RRGGBB'}
-        className="flex-1 font-mono"
       />
 
       {/* Color palette popover */}
       {isOpen && (
-        <div
-          ref={popoverRef}
-          className="
-            absolute left-0 top-full mt-1 z-50
-            bg-[var(--bg-primary)] border border-[var(--border-color)]
-            rounded-xl shadow-xl p-3
-            w-[280px]
-          "
-        >
+        <Popover ref={popoverRef}>
           {/* Recent colors section */}
           {recentColors.length > 0 && (
             <>
-              <div className="text-xs font-medium text-[var(--text-secondary)] mb-2">
-                Recent
-              </div>
-              <div className="grid grid-cols-6 gap-1.5 mb-3">
+              <SectionLabel>Recent</SectionLabel>
+              <ColorGrid $mb>
                 {recentColors.map((color, index) => (
-                  <button
+                  <SwatchButton
                     key={`recent-${index}-${color}`}
                     type="button"
                     onClick={() => handleSelectColor(color)}
-                    className="
-                      w-8 h-8 rounded-lg border border-[var(--border-color)]
-                      hover:scale-110 hover:border-[var(--accent-color)]
-                      transition-all cursor-pointer
-                      relative overflow-hidden
-                    "
-                    style={{
-                      background: `linear-gradient(45deg, #ccc 25%, transparent 25%), 
-                                   linear-gradient(-45deg, #ccc 25%, transparent 25%), 
-                                   linear-gradient(45deg, transparent 75%, #ccc 75%), 
-                                   linear-gradient(-45deg, transparent 75%, #ccc 75%)`,
-                      backgroundSize: '6px 6px',
-                      backgroundPosition: '0 0, 0 3px, 3px -3px, -3px 0px',
-                    }}
+                    style={checkerboardSmall}
                     title={color}
                   >
-                    <div 
-                      className="absolute inset-0"
-                      style={{ backgroundColor: color }}
-                    />
+                    <SwatchOverlay style={{ backgroundColor: color }} />
                     {value?.toUpperCase() === color.toUpperCase() && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-2 h-2 rounded-full bg-white border border-black/20 shadow" />
-                      </div>
+                      <SelectionIndicatorContainer>
+                        <SelectionDot />
+                      </SelectionIndicatorContainer>
                     )}
-                  </button>
+                  </SwatchButton>
                 ))}
-              </div>
+              </ColorGrid>
             </>
           )}
 
-          <div className="text-xs font-medium text-[var(--text-secondary)] mb-2">
-            Color Palette
-          </div>
-          
+          <SectionLabel>Color Palette</SectionLabel>
+
           {/* Color grid */}
-          <div className="grid grid-cols-6 gap-1.5">
+          <ColorGrid>
             {COLOR_PALETTE.slice(0, 18).map((color) => (
-              <button
+              <SwatchButton
                 key={color.hex}
                 type="button"
                 onClick={() => handleSelectColor(color.hex)}
-                className="
-                  w-8 h-8 rounded-lg border border-[var(--border-color)]
-                  hover:scale-110 hover:border-[var(--accent-color)]
-                  transition-all cursor-pointer
-                  relative overflow-hidden
-                "
-                style={{
-                  background: `linear-gradient(45deg, #ccc 25%, transparent 25%), 
-                               linear-gradient(-45deg, #ccc 25%, transparent 25%), 
-                               linear-gradient(45deg, transparent 75%, #ccc 75%), 
-                               linear-gradient(-45deg, transparent 75%, #ccc 75%)`,
-                  backgroundSize: '6px 6px',
-                  backgroundPosition: '0 0, 0 3px, 3px -3px, -3px 0px',
-                }}
+                style={checkerboardSmall}
                 title={`${color.name} (${color.hex})`}
               >
-                <div 
-                  className="absolute inset-0"
-                  style={{ backgroundColor: color.hex }}
-                />
+                <SwatchOverlay style={{ backgroundColor: color.hex }} />
                 {value?.toUpperCase() === color.hex.toUpperCase() && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-white border border-black/20 shadow" />
-                  </div>
+                  <SelectionIndicatorContainer>
+                    <SelectionDot />
+                  </SelectionIndicatorContainer>
                 )}
-              </button>
+              </SwatchButton>
             ))}
-          </div>
+          </ColorGrid>
 
           {/* Semantic colors section */}
-          <div className="text-xs font-medium text-[var(--text-secondary)] mt-3 mb-2">
-            Semantic
-          </div>
-          <div className="grid grid-cols-6 gap-1.5">
+          <SectionLabel $mt>Semantic</SectionLabel>
+          <ColorGrid>
             {COLOR_PALETTE.slice(18).map((color) => (
-              <button
+              <SwatchButton
                 key={color.hex + color.name}
                 type="button"
                 onClick={() => handleSelectColor(color.hex)}
-                className="
-                  w-8 h-8 rounded-lg border border-[var(--border-color)]
-                  hover:scale-110 hover:border-[var(--accent-color)]
-                  transition-all cursor-pointer
-                  relative overflow-hidden
-                "
-                style={{
-                  background: `linear-gradient(45deg, #ccc 25%, transparent 25%), 
-                               linear-gradient(-45deg, #ccc 25%, transparent 25%), 
-                               linear-gradient(45deg, transparent 75%, #ccc 75%), 
-                               linear-gradient(-45deg, transparent 75%, #ccc 75%)`,
-                  backgroundSize: '6px 6px',
-                  backgroundPosition: '0 0, 0 3px, 3px -3px, -3px 0px',
-                }}
+                style={checkerboardSmall}
                 title={`${color.name} (${color.hex})`}
               >
-                <div 
-                  className="absolute inset-0"
-                  style={{ backgroundColor: color.hex }}
-                />
+                <SwatchOverlay style={{ backgroundColor: color.hex }} />
                 {value?.toUpperCase() === color.hex.toUpperCase() && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-white border border-black/20 shadow" />
-                  </div>
+                  <SelectionIndicatorContainer>
+                    <SelectionDot />
+                  </SelectionIndicatorContainer>
                 )}
-              </button>
+              </SwatchButton>
             ))}
-          </div>
+          </ColorGrid>
 
           {/* Current value display */}
           {value && (
-            <div className="mt-3 pt-3 border-t border-[var(--border-color)] flex items-center gap-2">
-              <div 
-                className="w-6 h-6 rounded border border-[var(--border-color)]"
-                style={{ 
+            <CurrentValueSection>
+              <CurrentValueSwatch
+                style={{
                   backgroundColor: isValidColor ? currentColor : 'transparent',
                   background: !isValidColor ? '#f0f0f0' : undefined,
                 }}
               />
-              <span className="text-xs font-mono text-[var(--text-primary)]">
-                {value}
-              </span>
-            </div>
+              <CurrentValueText>{value}</CurrentValueText>
+            </CurrentValueSection>
           )}
-        </div>
+        </Popover>
       )}
-    </div>
+    </Container>
   );
 }
 
@@ -357,21 +439,21 @@ export function isColorProperty(propertyName: string, schema?: { description?: s
     'lightColor',
     'darkColor',
   ];
-  
+
   // Check property name
   if (colorPropertyNames.includes(propertyName)) {
     return true;
   }
-  
+
   // Check if name ends with "Color"
   if (propertyName.endsWith('Color')) {
     return true;
   }
-  
+
   // Check description for "hex" mention
   if (schema?.description?.toLowerCase().includes('hex')) {
     return true;
   }
-  
+
   return false;
 }

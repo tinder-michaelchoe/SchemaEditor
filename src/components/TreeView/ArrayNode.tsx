@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import styled, { css } from 'styled-components';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Collapsible } from '../ui/Collapsible';
@@ -11,6 +12,123 @@ import { DraggableArrayItem } from './DraggableArrayItem';
 import { ChildrenDropIndicator } from './ChildrenDropIndicator';
 import type { DragItemData } from './DraggableArrayItem';
 import { useEditorStore } from '../../store/editorStore';
+
+/* ------------------------------------------------------------------ */
+/*  Styled components                                                  */
+/* ------------------------------------------------------------------ */
+
+const SpacedContainer = styled.div`
+  & > * + * {
+    margin-top: 0.25rem;
+  }
+`;
+
+const EmptyMessage = styled.div`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textTertiary};
+  font-style: italic;
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+`;
+
+const ItemCountHint = styled.div`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+  margin-top: 0.25rem;
+  margin-left: 1.5rem;
+`;
+
+const AddButtonWrapper = styled.div`
+  width: calc(100% - 24px);
+  margin-top: 0.5rem;
+  margin-left: 1.5rem;
+`;
+
+const ItemTypeLabel = styled.span`
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const TitleSpan = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const CollapsibleContent = styled.div`
+  padding: 0.75rem;
+`;
+
+const ErrorBlock = styled.div<{ $marginBottom?: string }>`
+  margin-bottom: ${p => p.$marginBottom ?? '0.5rem'};
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.error};
+`;
+
+const DeleteIcon = styled(Trash2)`
+  color: ${p => p.theme.colors.error};
+`;
+
+/* -- ArrayPrimitiveRow styled components ----------------------------- */
+
+const PrimitiveRowWrapper = styled.div<{
+  $isEditing: boolean;
+  $isSelected: boolean;
+  $hasError: boolean;
+}>`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: ${p => p.theme.radii.lg};
+  transition: all 0.15s;
+  border: 1px solid;
+  cursor: pointer;
+
+  ${p =>
+    p.$isEditing
+      ? css`
+          background: ${p.theme.colors.accent}1a;
+          border-color: ${p.theme.colors.accent};
+          box-shadow: 0 0 0 2px ${p.theme.colors.accent}4d;
+        `
+      : p.$isSelected
+        ? css`
+            background: ${p.theme.colors.accent}0d;
+            border-color: ${p.theme.colors.accent};
+            box-shadow: 0 0 0 1px ${p.theme.colors.accent}33;
+          `
+        : p.$hasError
+          ? css`
+              background: ${p.theme.colors.bgSecondary};
+              border-color: ${p.theme.colors.error};
+            `
+          : css`
+              background: ${p.theme.colors.bgSecondary};
+              border-color: ${p.theme.colors.border};
+              &:hover {
+                border-color: ${p.theme.colors.accent}80;
+              }
+            `}
+`;
+
+const IndexLabel = styled.span`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textSecondary};
+  flex-shrink: 0;
+`;
+
+const FlexContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const DeleteButtonShrink = styled.div`
+  flex-shrink: 0;
+`;
+
+/* ------------------------------------------------------------------ */
+/*  Interfaces                                                         */
+/* ------------------------------------------------------------------ */
 
 interface ArrayNodeProps {
   value: unknown[];
@@ -35,6 +153,10 @@ interface ArrayNodeProps {
   }) => React.ReactNode;
 }
 
+/* ------------------------------------------------------------------ */
+/*  ArrayNode                                                          */
+/* ------------------------------------------------------------------ */
+
 export function ArrayNode({
   value,
   onChange,
@@ -53,23 +175,23 @@ export function ArrayNode({
 }: ArrayNodeProps) {
   const resolved = resolveSchema(schema, context);
   const items = Array.isArray(value) ? value : [];
-  
+
   // Check if this is a "children" array (enables drag-drop)
   const lastPathSegment = path[path.length - 1];
   const isChildrenArray = lastPathSegment === 'children';
   const arrayPathStr = pathToString(path);
-  
+
   // Get store actions for drag-drop
   const moveArrayItem = useEditorStore((state) => state.moveArrayItem);
   const moveItemBetweenArrays = useEditorStore((state) => state.moveItemBetweenArrays);
-  
+
   // Get item schema
-  const itemSchema = resolved.items && !Array.isArray(resolved.items) 
-    ? resolved.items 
+  const itemSchema = resolved.items && !Array.isArray(resolved.items)
+    ? resolved.items
     : {};
-  
+
   const resolvedItemSchema = resolveSchema(itemSchema, context);
-  
+
   const handleAddItem = () => {
     const newItem = generateDefaultValue(resolvedItemSchema, context);
     onChange([...items, newItem]);
@@ -89,7 +211,7 @@ export function ArrayNode({
   // Handle drop for reordering
   const handleDrop = useCallback((sourceData: DragItemData, targetIndex: number) => {
     const { sourcePath, sourceIndex } = sourceData;
-    
+
     if (sourcePath === arrayPathStr) {
       // Same array - reorder
       moveArrayItem(path, sourceIndex, targetIndex);
@@ -104,14 +226,14 @@ export function ArrayNode({
   // Validate if a drop is allowed
   const isValidDrop = useCallback((sourceData: DragItemData): boolean => {
     const { sourcePath, sourceIndex } = sourceData;
-    
+
     // Can't drop an item into its own descendants
     // e.g., can't drop root.children[0] into root.children[0].children
     const sourceItemPath = `${sourcePath}[${sourceIndex}]`;
     if (arrayPathStr.startsWith(sourceItemPath)) {
       return false;
     }
-    
+
     // Check schema constraints for cross-array moves
     if (sourcePath !== arrayPathStr) {
       // Check maxItems constraint on target
@@ -119,7 +241,7 @@ export function ArrayNode({
         return false;
       }
     }
-    
+
     return true;
   }, [arrayPathStr, items.length, resolved.maxItems]);
 
@@ -135,7 +257,7 @@ export function ArrayNode({
   };
 
   return (
-    <div className="space-y-1">
+    <SpacedContainer>
       {items.length === 0 ? (
         <>
           {isChildrenArray && (
@@ -146,9 +268,9 @@ export function ArrayNode({
               isValidDrop={isValidDrop}
             />
           )}
-          <div className="text-sm text-[var(--text-tertiary)] italic py-2 pl-6">
+          <EmptyMessage>
             Empty array
-          </div>
+          </EmptyMessage>
         </>
       ) : (
         items.map((item, index) => {
@@ -159,7 +281,7 @@ export function ArrayNode({
           const hasError = !!itemErrors;
           const isSelected = selectedPath === itemPathStr;
           const isEditing = editingPath === itemPathStr;
-          
+
           // Check if item is a primitive or complex type
           const itemType = typeof item;
           const isComplex = itemType === 'object' && item !== null;
@@ -168,7 +290,7 @@ export function ArrayNode({
           // Wrap content in draggable if this is a children array
           const wrapInDraggable = (content: React.ReactNode) => {
             if (!isChildrenArray) return content;
-            
+
             return (
               <DraggableArrayItem
                 arrayPath={arrayPathStr}
@@ -192,7 +314,7 @@ export function ArrayNode({
                     isValidDrop={isValidDrop}
                   />
                 )}
-                
+
                 {wrapInDraggable(
                   <Collapsible
                     nodeId={`node-${itemPathStr}`}
@@ -201,14 +323,14 @@ export function ArrayNode({
                     onSelect={() => onSelect(itemPathStr)}
                     isSelected={isSelected}
                     title={
-                      <span className="flex items-center gap-2">
+                      <TitleSpan>
                         <span>[{index}]</span>
                         {item && typeof item === 'object' && 'type' in item && (
-                          <span className="text-[var(--text-tertiary)]">
+                          <ItemTypeLabel>
                             {String((item as Record<string, unknown>).type)}
-                          </span>
+                          </ItemTypeLabel>
                         )}
-                      </span>
+                      </TitleSpan>
                     }
                     badge={
                       <Badge variant="type">
@@ -222,20 +344,19 @@ export function ArrayNode({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveItem(index)}
-                          className="text-[var(--error-color)] hover:text-[var(--error-color)]"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <DeleteIcon size={12} />
                         </Button>
                       )
                     }
                   >
-                    <div className="p-3">
+                    <CollapsibleContent>
                       {itemErrors && (
-                        <div className="mb-2 text-xs text-[var(--error-color)]">
+                        <ErrorBlock>
                           {itemErrors.map((e, i) => (
                             <div key={i}>{e.message}</div>
                           ))}
-                        </div>
+                        </ErrorBlock>
                       )}
                       {renderNode({
                         value: item,
@@ -244,10 +365,10 @@ export function ArrayNode({
                         path: itemPath,
                         depth: depth + 1,
                       })}
-                    </div>
+                    </CollapsibleContent>
                   </Collapsible>
                 )}
-                
+
                 {/* Drop indicator after last item */}
                 {isChildrenArray && index === items.length - 1 && (
                   <ChildrenDropIndicator
@@ -273,7 +394,7 @@ export function ArrayNode({
                   isValidDrop={isValidDrop}
                 />
               )}
-              
+
               {wrapInDraggable(
                 <ArrayPrimitiveRow
                   index={index}
@@ -294,7 +415,7 @@ export function ArrayNode({
                   depth={depth}
                 />
               )}
-              
+
               {/* Drop indicator after last item */}
               {isChildrenArray && index === items.length - 1 && (
                 <ChildrenDropIndicator
@@ -308,34 +429,38 @@ export function ArrayNode({
           );
         })
       )}
-      
+
       {canAddMore && (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={handleAddItem}
-          className="w-full mt-2 ml-6"
-          style={{ width: 'calc(100% - 24px)' }}
-        >
-          <Plus className="w-3 h-3" />
-          Add Item
-        </Button>
+        <AddButtonWrapper>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleAddItem}
+            style={{ width: '100%' }}
+          >
+            <Plus size={12} />
+            Add Item
+          </Button>
+        </AddButtonWrapper>
       )}
-      
+
       {resolved.minItems !== undefined && resolved.maxItems !== undefined && (
-        <div className="text-xs text-[var(--text-tertiary)] mt-1 ml-6">
+        <ItemCountHint>
           {resolved.minItems} - {resolved.maxItems} items allowed
-        </div>
+        </ItemCountHint>
       )}
-    </div>
+    </SpacedContainer>
   );
 }
 
-// Helper to parse path string back to array
+/* ------------------------------------------------------------------ */
+/*  Helper to parse path string back to array                          */
+/* ------------------------------------------------------------------ */
+
 function parsePathString(pathStr: string): (string | number)[] {
   const result: (string | number)[] = [];
   const parts = pathStr.split('.');
-  
+
   for (const part of parts) {
     // Check for array notation like "children[0]"
     const match = part.match(/^(.+?)\[(\d+)\]$/);
@@ -348,11 +473,14 @@ function parsePathString(pathStr: string): (string | number)[] {
       result.push(part);
     }
   }
-  
+
   return result;
 }
 
-// Separate component for primitive array items
+/* ------------------------------------------------------------------ */
+/*  ArrayPrimitiveRow                                                  */
+/* ------------------------------------------------------------------ */
+
 interface ArrayPrimitiveRowProps {
   index: number;
   itemPathStr: string;
@@ -405,7 +533,7 @@ function ArrayPrimitiveRow({
   }, [isSelected, isEditing]);
 
   return (
-    <div
+    <PrimitiveRowWrapper
       ref={rowRef}
       id={`node-${itemPathStr}`}
       onClick={onSelect}
@@ -415,29 +543,20 @@ function ArrayPrimitiveRow({
           onEditingChange(null);
         }
       }}
-      className={`
-        flex items-center gap-2 p-2 rounded-lg transition-all
-        border cursor-pointer
-        ${isEditing 
-          ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] ring-2 ring-[var(--accent-color)]/30' 
-          : isSelected
-            ? 'bg-[var(--accent-color)]/5 border-[var(--accent-color)] ring-1 ring-[var(--accent-color)]/20'
-            : hasError 
-              ? 'bg-[var(--bg-secondary)] border-[var(--error-color)]'
-              : 'bg-[var(--bg-secondary)] border-[var(--border-color)] hover:border-[var(--accent-color)]/50'
-        }
-      `}
+      $isEditing={isEditing}
+      $isSelected={isSelected}
+      $hasError={hasError}
     >
-      <span className="text-xs text-[var(--text-secondary)] flex-shrink-0">
+      <IndexLabel>
         [{index}]
-      </span>
-      <div className="flex-1 min-w-0">
+      </IndexLabel>
+      <FlexContent>
         {itemErrors && (
-          <div className="mb-1 text-xs text-[var(--error-color)]">
+          <ErrorBlock $marginBottom="0.25rem">
             {itemErrors.map((e, i) => (
               <div key={i}>{e.message}</div>
             ))}
-          </div>
+          </ErrorBlock>
         )}
         {renderNode({
           value: item,
@@ -446,17 +565,18 @@ function ArrayPrimitiveRow({
           path,
           depth: depth + 1,
         })}
-      </div>
+      </FlexContent>
       {canRemove && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onRemove}
-          className="text-[var(--error-color)] hover:text-[var(--error-color)] flex-shrink-0"
-        >
-          <Trash2 className="w-3 h-3" />
-        </Button>
+        <DeleteButtonShrink>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+          >
+            <DeleteIcon size={12} />
+          </Button>
+        </DeleteButtonShrink>
       )}
-    </div>
+    </PrimitiveRowWrapper>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useRef } from 'react';
+import styled, { css } from 'styled-components';
 import { GripVertical } from 'lucide-react';
 
 // Data transferred during drag operations
@@ -20,6 +21,46 @@ interface DraggableArrayItemProps {
 // Drag data type identifier
 export const DRAG_TYPE = 'application/x-children-item';
 
+const Wrapper = styled.div<{ $isDragging: boolean }>`
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  transition: opacity 150ms ease;
+  opacity: ${p => (p.$isDragging ? 0.5 : 1)};
+`;
+
+const DragHandle = styled.div<{ $isDragging: boolean }>`
+  flex-shrink: 0;
+  width: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: ${p => p.theme.colors.textTertiary};
+  border-radius: ${p => p.theme.radii.sm} 0 0 ${p => p.theme.radii.sm};
+  transition: color 150ms ease, background-color 150ms ease;
+
+  &:hover {
+    color: ${p => p.theme.colors.textSecondary};
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  ${p =>
+    p.$isDragging &&
+    css`
+      cursor: grabbing;
+    `}
+`;
+
+const Content = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
 export function DraggableArrayItem({
   children,
   arrayPath,
@@ -33,7 +74,7 @@ export function DraggableArrayItem({
 
   const handleDragStart = useCallback((e: React.DragEvent) => {
     e.stopPropagation();
-    
+
     const dragData: DragItemData = {
       sourcePath: arrayPath,
       sourceIndex: index,
@@ -60,52 +101,39 @@ export function DraggableArrayItem({
   }, []);
 
   return (
-    <div
-      className={`
-        relative flex items-stretch
-        transition-opacity duration-150
-        ${isDragging ? 'opacity-50' : 'opacity-100'}
-      `}
-    >
+    <Wrapper $isDragging={isDragging}>
       {/* Left margin drag handle */}
-      <div
+      <DragHandle
         ref={dragHandleRef}
         draggable
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onClick={handleDragHandleClick}
         onMouseDown={(e) => e.stopPropagation()}
-        className={`
-          flex-shrink-0 w-6 flex items-center justify-center
-          cursor-grab active:cursor-grabbing
-          text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]
-          hover:bg-[var(--bg-tertiary)] rounded-l
-          transition-colors duration-150
-          ${isDragging ? 'cursor-grabbing' : ''}
-        `}
+        $isDragging={isDragging}
         title="Drag to reorder"
       >
-        <GripVertical className="w-4 h-4" />
-      </div>
+        <GripVertical size={16} />
+      </DragHandle>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <Content>
         {children}
-      </div>
-    </div>
+      </Content>
+    </Wrapper>
   );
 }
 
 // Helper to check if a drag event contains our drag type
 export function isDraggingChildrenItem(e: React.DragEvent): boolean {
-  return e.dataTransfer.types.includes(DRAG_TYPE) || 
+  return e.dataTransfer.types.includes(DRAG_TYPE) ||
          e.dataTransfer.types.includes('text/plain');
 }
 
 // Helper to get drag data from an event
 export function getDragItemData(e: React.DragEvent): DragItemData | null {
   try {
-    const jsonData = e.dataTransfer.getData(DRAG_TYPE) || 
+    const jsonData = e.dataTransfer.getData(DRAG_TYPE) ||
                      e.dataTransfer.getData('text/plain');
     if (jsonData) {
       return JSON.parse(jsonData) as DragItemData;

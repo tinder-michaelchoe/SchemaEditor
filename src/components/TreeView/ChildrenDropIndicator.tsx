@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import styled, { css } from 'styled-components';
 import { isDraggingChildrenItem, getDragItemData } from './DraggableArrayItem';
 import type { DragItemData } from './DraggableArrayItem';
 
@@ -8,6 +9,44 @@ interface ChildrenDropIndicatorProps {
   onDrop: (sourceData: DragItemData, targetIndex: number) => void;
   isValidDrop?: (sourceData: DragItemData) => boolean;
 }
+
+const DropZone = styled.div`
+  position: relative;
+  height: 0.5rem;
+`;
+
+const IndicatorLine = styled.div<{ $isValid: boolean }>`
+  position: absolute;
+  left: 1.5rem;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2px;
+  border-radius: 9999px;
+
+  ${p =>
+    p.$isValid
+      ? css`
+          background: ${p.theme.colors.accent};
+          box-shadow: 0 0 8px ${p.theme.colors.accent};
+        `
+      : css`
+          background: ${p.theme.colors.error};
+          opacity: 0.5;
+        `}
+`;
+
+const IndicatorDot = styled.div`
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: ${p => p.theme.radii.full};
+  background: ${p => p.theme.colors.accent};
+  box-shadow: 0 0 8px ${p => p.theme.colors.accent};
+`;
 
 export function ChildrenDropIndicator({
   targetArrayPath,
@@ -70,39 +109,20 @@ export function ChildrenDropIndicator({
   }, [targetIndex, onDrop, isValidDrop]);
 
   return (
-    <div
+    <DropZone
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className="relative h-2"
     >
       {/* Drop indicator line - only visible when dragging over */}
       {isOver && (
         <>
-          <div
-            className={`
-              absolute left-6 right-0 top-1/2 -translate-y-1/2
-              h-0.5 rounded-full
-              ${isValid
-                ? 'bg-[var(--accent-color)] shadow-[0_0_8px_var(--accent-color)]'
-                : 'bg-[var(--error-color)] opacity-50'
-              }
-            `}
-          />
+          <IndicatorLine $isValid={isValid} />
           {/* Drop zone circle indicator */}
-          {isValid && (
-            <div
-              className="
-                absolute left-3 top-1/2 -translate-y-1/2
-                w-2 h-2 rounded-full
-                bg-[var(--accent-color)]
-                shadow-[0_0_8px_var(--accent-color)]
-              "
-            />
-          )}
+          {isValid && <IndicatorDot />}
         </>
       )}
-    </div>
+    </DropZone>
   );
 }

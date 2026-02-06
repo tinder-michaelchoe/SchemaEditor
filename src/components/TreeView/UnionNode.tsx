@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import styled from 'styled-components';
 import { Select } from '../ui/Select';
 import type { JSONSchema, SchemaContext } from '../../types/schema';
 import { resolveSchema, getDiscriminator, getSchemaLabel } from '../../utils/schemaUtils';
@@ -22,6 +23,21 @@ interface UnionNodeProps {
   depth: number;
 }
 
+const NoVariantsText = styled.div`
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const VariantsWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const VariantContent = styled.div`
+  padding-left: 0.5rem;
+  border-left: 2px solid ${p => p.theme.colors.border};
+`;
+
 export function UnionNode({
   value,
   onChange,
@@ -34,10 +50,10 @@ export function UnionNode({
   depth,
 }: UnionNodeProps) {
   const variants = schema.oneOf || schema.anyOf || [];
-  
+
   // Check for discriminated union
   const discriminator = useMemo(() => getDiscriminator(schema, context), [schema, context]);
-  
+
   // Find the current matching variant
   const { selectedIndex, selectedVariant } = useMemo(() => {
     if (discriminator && value && typeof value === 'object') {
@@ -53,22 +69,22 @@ export function UnionNode({
         }
       }
     }
-    
+
     // Fallback: try to match by structure
     for (let i = 0; i < variants.length; i++) {
       const resolved = resolveSchema(variants[i], context);
       // Simple type matching
       if (resolved.type) {
         const types = Array.isArray(resolved.type) ? resolved.type : [resolved.type];
-        const valueType = Array.isArray(value) ? 'array' 
-          : value === null ? 'null' 
+        const valueType = Array.isArray(value) ? 'array'
+          : value === null ? 'null'
           : typeof value;
         if (types.includes(valueType as never)) {
           return { selectedIndex: i, selectedVariant: resolved };
         }
       }
     }
-    
+
     return { selectedIndex: 0, selectedVariant: variants[0] ? resolveSchema(variants[0], context) : null };
   }, [value, variants, discriminator, context]);
 
@@ -76,7 +92,7 @@ export function UnionNode({
   const options = useMemo(() => {
     return variants.map((variant, index) => {
       const resolved = resolveSchema(variant, context);
-      
+
       // For discriminated unions, show the const value
       if (discriminator) {
         const constSchema = resolved.properties?.[discriminator.propertyName];
@@ -90,7 +106,7 @@ export function UnionNode({
           }
         }
       }
-      
+
       // Fallback to schema label
       return {
         value: String(index),
@@ -109,11 +125,11 @@ export function UnionNode({
   };
 
   if (variants.length === 0) {
-    return <div className="text-[var(--text-secondary)]">No variants defined</div>;
+    return <NoVariantsText>No variants defined</NoVariantsText>;
   }
 
   return (
-    <div className="space-y-2">
+    <VariantsWrapper>
       <Select
         value={String(selectedIndex)}
         onChange={(e) => handleVariantChange(parseInt(e.target.value, 10))}
@@ -121,9 +137,9 @@ export function UnionNode({
         error={error}
         disabled={disabled}
       />
-      
+
       {selectedVariant && (
-        <div className="pl-2 border-l-2 border-[var(--border-color)]">
+        <VariantContent>
           {renderNode({
             value,
             onChange,
@@ -131,8 +147,8 @@ export function UnionNode({
             path,
             depth: depth + 1,
           })}
-        </div>
+        </VariantContent>
       )}
-    </div>
+    </VariantsWrapper>
   );
 }

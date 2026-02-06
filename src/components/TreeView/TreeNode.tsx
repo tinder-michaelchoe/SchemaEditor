@@ -1,3 +1,4 @@
+import styled from 'styled-components';
 import type { JSONSchema, SchemaContext } from '../../types/schema';
 import { resolveSchema, getSchemaTypes, mergeAllOf } from '../../utils/schemaUtils';
 import { StringNode } from './StringNode';
@@ -28,6 +29,23 @@ interface TreeNodeProps {
 
 const MAX_DEPTH = 20;
 
+const MaxDepthMessage = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textTertiary};
+  font-style: italic;
+`;
+
+const CircularRefMessage = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.warning};
+  font-style: italic;
+`;
+
+const UnknownTypeWrapper = styled.div`
+  font-size: ${p => p.theme.fontSizes.sm};
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
 export function TreeNode({
   value,
   onChange,
@@ -46,9 +64,9 @@ export function TreeNode({
   // Prevent infinite recursion
   if (depth > MAX_DEPTH) {
     return (
-      <div className="text-xs text-[var(--text-tertiary)] italic">
+      <MaxDepthMessage>
         Max depth reached
-      </div>
+      </MaxDepthMessage>
     );
   }
 
@@ -57,9 +75,9 @@ export function TreeNode({
   // Handle circular references
   if ((resolved as { _isCircular?: boolean })._isCircular) {
     return (
-      <div className="text-xs text-[var(--warning-color)] italic">
+      <CircularRefMessage>
         Circular reference detected
-      </div>
+      </CircularRefMessage>
     );
   }
 
@@ -130,7 +148,7 @@ export function TreeNode({
 
   // Get types from schema
   const types = getSchemaTypes(resolved);
-  
+
   // If multiple types, we need a type selector (simplified - just use first type)
   const primaryType = types[0];
 
@@ -159,10 +177,10 @@ export function TreeNode({
 
     case 'string':
       // Get property name from path (last string segment)
-      const propertyName = path.length > 0 
+      const propertyName = path.length > 0
         ? path.filter(p => typeof p === 'string').pop() as string | undefined
         : undefined;
-      
+
       return (
         <StringNode
           value={value as string}
@@ -239,7 +257,7 @@ export function TreeNode({
     default:
       // Unknown or any type - render as JSON string input
       return (
-        <div className="text-sm text-[var(--text-secondary)]">
+        <UnknownTypeWrapper>
           <StringNode
             value={typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
             onChange={(newValue) => {
@@ -251,7 +269,7 @@ export function TreeNode({
             }}
             schema={{ format: 'textarea' }}
           />
-        </div>
+        </UnknownTypeWrapper>
       );
   }
 }
