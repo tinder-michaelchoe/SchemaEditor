@@ -1,6 +1,91 @@
 import React, { useState } from 'react';
+import styled from 'styled-components';
 import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+
+const ObjectWrapper = styled.div`
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 0.375rem;
+  overflow: hidden;
+`;
+
+const ObjectHeader = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: ${p => p.theme.colors.bgTertiary};
+  text-align: left;
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgSecondary};
+  }
+`;
+
+const ObjectTitle = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const PropertyCount = styled.span`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+  margin-left: auto;
+`;
+
+const ObjectContent = styled.div`
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const PropertyRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+`;
+
+const PropertyContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const AddPropertyRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: ${p => p.theme.colors.bgTertiary};
+  border-radius: 0.375rem;
+`;
+
+const PropertyInput = styled.input`
+  flex: 1;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+  color: ${p => p.theme.colors.textPrimary};
+
+  &:focus {
+    outline: none;
+    border-color: ${p => p.theme.colors.accent};
+  }
+`;
+
+const EmptyText = styled.p`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textTertiary};
+  text-align: center;
+  padding: 0.5rem 0;
+`;
 
 interface ObjectEditorProps {
   value: Record<string, unknown>;
@@ -40,50 +125,43 @@ export function ObjectEditor({
   };
 
   return (
-    <div className="border border-[var(--border-color)] rounded-md overflow-hidden">
+    <ObjectWrapper>
       {title && (
-        <button
+        <ObjectHeader
           onClick={() => setIsOpen(!isOpen)}
-          className="
-            w-full flex items-center gap-2 px-3 py-2
-            bg-[var(--bg-tertiary)] text-left
-            hover:bg-[var(--bg-secondary)]
-            transition-colors duration-150
-          "
         >
           {isOpen ? (
-            <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />
+            <ChevronDown size={16} color="currentColor" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
+            <ChevronRight size={16} color="currentColor" />
           )}
-          <span className="text-sm font-medium text-[var(--text-primary)]">
+          <ObjectTitle>
             {title}
-          </span>
-          <span className="text-xs text-[var(--text-tertiary)] ml-auto">
+          </ObjectTitle>
+          <PropertyCount>
             {keys.length} {keys.length === 1 ? 'property' : 'properties'}
-          </span>
-        </button>
+          </PropertyCount>
+        </ObjectHeader>
       )}
 
       {(isOpen || !title) && (
-        <div className="p-2 space-y-2">
+        <ObjectContent>
           {keys.map((key) => (
-            <div key={key} className="flex items-start gap-2">
-              <div className="flex-1 min-w-0">
+            <PropertyRow key={key}>
+              <PropertyContent>
                 {renderProperty(key, value[key])}
-              </div>
+              </PropertyContent>
               {onRemoveProperty && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onRemoveProperty(key)}
                   disabled={disabled}
-                  className="text-[var(--error-color)] hover:bg-[var(--error-color)]/10"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 size={12} />
                 </Button>
               )}
-            </div>
+            </PropertyRow>
           ))}
 
           {allowAddProperty && !isAddingProperty && (
@@ -92,16 +170,15 @@ export function ObjectEditor({
               size="sm"
               onClick={() => setIsAddingProperty(true)}
               disabled={disabled}
-              className="w-full"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              <Plus size={16} />
               Add Property
             </Button>
           )}
 
           {isAddingProperty && (
-            <div className="flex items-center gap-2 p-2 bg-[var(--bg-tertiary)] rounded-md">
-              <input
+            <AddPropertyRow>
+              <PropertyInput
                 type="text"
                 value={newKey}
                 onChange={(e) => setNewKey(e.target.value)}
@@ -111,12 +188,6 @@ export function ObjectEditor({
                   if (e.key === 'Enter') handleAddProperty();
                   if (e.key === 'Escape') setIsAddingProperty(false);
                 }}
-                className="
-                  flex-1 px-2 py-1.5 text-sm rounded-md
-                  bg-[var(--bg-primary)] border border-[var(--border-color)]
-                  focus:outline-none focus:border-[var(--accent-color)]
-                  text-[var(--text-primary)]
-                "
               />
               <Button size="sm" onClick={handleAddProperty}>
                 Add
@@ -128,16 +199,16 @@ export function ObjectEditor({
               >
                 Cancel
               </Button>
-            </div>
+            </AddPropertyRow>
           )}
 
           {keys.length === 0 && !isAddingProperty && (
-            <p className="text-sm text-[var(--text-tertiary)] text-center py-2">
+            <EmptyText>
               No properties
-            </p>
+            </EmptyText>
           )}
-        </div>
+        </ObjectContent>
       )}
-    </div>
+    </ObjectWrapper>
   );
 }

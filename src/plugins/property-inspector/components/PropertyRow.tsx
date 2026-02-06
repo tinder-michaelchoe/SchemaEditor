@@ -1,4 +1,60 @@
 import React from 'react';
+import styled from 'styled-components';
+import { truncateText } from '@/styles/mixins';
+
+const VerticalRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+`;
+
+const LabelRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+`;
+
+const Label = styled.label`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const RequiredMark = styled.span`
+  color: ${p => p.theme.colors.error};
+`;
+
+const Description = styled.p`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const HorizontalRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const LabelColumn = styled.div`
+  width: 33.333333%;
+  flex-shrink: 0;
+`;
+
+const LabelTruncated = styled.label`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textSecondary};
+  ${truncateText}
+`;
+
+const DescriptionTruncated = styled.p`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+  ${truncateText}
+`;
+
+const ValueColumn = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
 
 interface PropertyRowProps {
   label: string;
@@ -17,35 +73,33 @@ export function PropertyRow({
 }: PropertyRowProps) {
   if (layout === 'vertical') {
     return (
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-1">
-          <label className="text-sm text-[var(--text-secondary)]">{label}</label>
-          {required && <span className="text-[var(--error-color)]">*</span>}
-        </div>
+      <VerticalRow>
+        <LabelRow>
+          <Label>{label}</Label>
+          {required && <RequiredMark>*</RequiredMark>}
+        </LabelRow>
         {description && (
-          <p className="text-xs text-[var(--text-tertiary)]">{description}</p>
+          <Description>{description}</Description>
         )}
         {children}
-      </div>
+      </VerticalRow>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-1/3 flex-shrink-0">
-        <div className="flex items-center gap-1">
-          <label className="text-sm text-[var(--text-secondary)] truncate">
-            {label}
-          </label>
-          {required && <span className="text-[var(--error-color)]">*</span>}
-        </div>
+    <HorizontalRow>
+      <LabelColumn>
+        <LabelRow>
+          <LabelTruncated>{label}</LabelTruncated>
+          {required && <RequiredMark>*</RequiredMark>}
+        </LabelRow>
         {description && (
-          <p className="text-xs text-[var(--text-tertiary)] truncate" title={description}>
+          <DescriptionTruncated title={description}>
             {description}
-          </p>
+          </DescriptionTruncated>
         )}
-      </div>
-      <div className="flex-1 min-w-0">{children}</div>
-    </div>
+      </LabelColumn>
+      <ValueColumn>{children}</ValueColumn>
+    </HorizontalRow>
   );
 }

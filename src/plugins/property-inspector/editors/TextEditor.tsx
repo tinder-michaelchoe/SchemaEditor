@@ -1,5 +1,33 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import styled from 'styled-components';
 import { Input } from '@/components/ui/Input';
+
+const StyledTextArea = styled.textarea`
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0.375rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+  color: ${p => p.theme.colors.textPrimary};
+  resize: vertical;
+  min-height: 60px;
+
+  &::placeholder {
+    color: ${p => p.theme.colors.textTertiary};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${p => p.theme.colors.accent};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
 interface TextEditorProps {
   value: string;
@@ -53,21 +81,12 @@ export function TextEditor({
 
   if (multiline) {
     return (
-      <textarea
+      <StyledTextArea
         value={localValue}
         onChange={handleChange}
         onBlur={handleBlur}
         placeholder={placeholder}
         disabled={disabled}
-        className="
-          w-full px-2 py-1.5 text-sm rounded-md
-          bg-[var(--bg-primary)] border border-[var(--border-color)]
-          focus:outline-none focus:border-[var(--accent-color)]
-          text-[var(--text-primary)]
-          placeholder-[var(--text-tertiary)]
-          disabled:opacity-50 disabled:cursor-not-allowed
-          resize-y min-h-[60px]
-        "
       />
     );
   }
@@ -80,7 +99,6 @@ export function TextEditor({
       onKeyDown={handleKeyDown}
       placeholder={placeholder}
       disabled={disabled}
-      className="w-full"
     />
   );
 }

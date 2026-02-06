@@ -1,6 +1,42 @@
 import React from 'react';
+import styled from 'styled-components';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+
+const ArrayWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const ItemRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background: ${p => p.theme.colors.bgTertiary};
+  border: 1px solid ${p => p.theme.colors.border};
+`;
+
+const GripArea = styled.div`
+  display: flex;
+  align-items: center;
+  color: ${p => p.theme.colors.textTertiary};
+  cursor: grab;
+`;
+
+const ItemContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const EmptyMessage = styled.p`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textTertiary};
+  text-align: center;
+  padding: 0.5rem 0;
+`;
 
 interface ArrayEditorProps {
   value: unknown[];
@@ -24,29 +60,22 @@ export function ArrayEditor({
   const canAdd = !maxItems || value.length < maxItems;
 
   return (
-    <div className="space-y-2">
+    <ArrayWrapper>
       {value.map((item, index) => (
-        <div
-          key={index}
-          className="
-            flex items-start gap-2 p-2 rounded-md
-            bg-[var(--bg-tertiary)] border border-[var(--border-color)]
-          "
-        >
-          <div className="flex items-center text-[var(--text-tertiary)] cursor-grab">
-            <GripVertical className="w-4 h-4" />
-          </div>
-          <div className="flex-1 min-w-0">{renderItem(item, index)}</div>
+        <ItemRow key={index}>
+          <GripArea>
+            <GripVertical size={16} />
+          </GripArea>
+          <ItemContent>{renderItem(item, index)}</ItemContent>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onRemoveItem(index)}
             disabled={disabled}
-            className="text-[var(--error-color)] hover:bg-[var(--error-color)]/10"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 size={16} />
           </Button>
-        </div>
+        </ItemRow>
       ))}
 
       {canAdd && (
@@ -55,18 +84,17 @@ export function ArrayEditor({
           size="sm"
           onClick={onAddItem}
           disabled={disabled}
-          className="w-full"
         >
-          <Plus className="w-4 h-4 mr-1" />
+          <Plus size={16} />
           Add Item
         </Button>
       )}
 
       {value.length === 0 && (
-        <p className="text-sm text-[var(--text-tertiary)] text-center py-2">
+        <EmptyMessage>
           No items
-        </p>
+        </EmptyMessage>
       )}
-    </div>
+    </ArrayWrapper>
   );
 }

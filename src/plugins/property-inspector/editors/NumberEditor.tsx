@@ -1,4 +1,43 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import styled from 'styled-components';
+
+const Row = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const RangeSlider = styled.input`
+  flex: 1;
+  height: 0.25rem;
+  background: ${p => p.theme.colors.bgTertiary};
+  border-radius: 0.5rem;
+  appearance: none;
+  cursor: pointer;
+  accent-color: ${p => p.theme.colors.accent};
+`;
+
+const NumberInput = styled.input<{ $showSlider?: boolean }>`
+  width: ${p => (p.$showSlider ? '4rem' : '100%')};
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0.375rem;
+  text-align: right;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+  color: ${p => p.theme.colors.textPrimary};
+
+  &:focus {
+    outline: none;
+    border-color: ${p => p.theme.colors.accent};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 
 interface NumberEditorProps {
   value: number;
@@ -68,9 +107,9 @@ export function NumberEditor({
   );
 
   return (
-    <div className="flex items-center gap-2">
+    <Row>
       {showSlider && min !== undefined && max !== undefined && (
-        <input
+        <RangeSlider
           type="range"
           min={min}
           max={max}
@@ -78,10 +117,9 @@ export function NumberEditor({
           value={parseFloat(localValue) || 0}
           onChange={handleSliderChange}
           disabled={disabled}
-          className="flex-1 h-1 bg-[var(--bg-tertiary)] rounded-lg appearance-none cursor-pointer accent-[var(--accent-color)]"
         />
       )}
-      <input
+      <NumberInput
         type="text"
         inputMode="decimal"
         value={localValue}
@@ -89,15 +127,8 @@ export function NumberEditor({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         disabled={disabled}
-        className={`
-          ${showSlider ? 'w-16' : 'w-full'} 
-          px-2 py-1.5 text-sm rounded-md text-right
-          bg-[var(--bg-primary)] border border-[var(--border-color)]
-          focus:outline-none focus:border-[var(--accent-color)]
-          text-[var(--text-primary)]
-          disabled:opacity-50 disabled:cursor-not-allowed
-        `}
+        $showSlider={showSlider}
       />
-    </div>
+    </Row>
   );
 }

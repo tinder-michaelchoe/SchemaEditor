@@ -1,10 +1,203 @@
 import React, { useCallback } from 'react';
-import { 
+import styled, { css } from 'styled-components';
+import {
   Lock,
   Unlock,
   Maximize2,
   Pin,
 } from 'lucide-react';
+
+const LayoutWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
+
+const SizeRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const SizeField = styled.div`
+  flex: 1;
+`;
+
+const FieldLabel = styled.label`
+  font-size: 10px;
+  color: ${p => p.theme.colors.textTertiary};
+  margin-bottom: 0.125rem;
+  display: block;
+`;
+
+const SizeInput = styled.input`
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  border: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgPrimary};
+  color: ${p => p.theme.colors.textPrimary};
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px ${p => p.theme.colors.accent};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const AspectRatioButton = styled.button<{ $locked: boolean }>`
+  margin-top: 1rem;
+  padding: 0.375rem;
+  border-radius: 0.25rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms;
+
+  ${p => p.$locked
+    ? css`
+        background: ${p.theme.colors.accent};
+        color: white;
+      `
+    : css`
+        background: ${p.theme.colors.bgTertiary};
+        color: ${p.theme.colors.textSecondary};
+        &:hover {
+          background: ${p.theme.colors.border};
+        }
+      `
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const SectionLabel = styled.label`
+  font-size: 10px;
+  color: ${p => p.theme.colors.textTertiary};
+  margin-bottom: 0.375rem;
+  display: block;
+`;
+
+const PinGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+`;
+
+const PinButton = styled.button<{ $isPinned: boolean }>`
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: capitalize;
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+
+  ${p => p.$isPinned
+    ? css`
+        background: ${p.theme.colors.accent};
+        color: white;
+      `
+    : css`
+        background: ${p.theme.colors.bgTertiary};
+        color: ${p.theme.colors.textSecondary};
+        &:hover {
+          background: ${p.theme.colors.border};
+        }
+      `
+  }
+`;
+
+const PaddingGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+`;
+
+const FillRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const FillLabel = styled.label`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const FillButton = styled.button<{ $active: boolean }>`
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: background-color 150ms;
+
+  ${p => p.$active
+    ? css`
+        background: ${p.theme.colors.accent};
+        color: white;
+      `
+    : css`
+        background: ${p.theme.colors.bgTertiary};
+        color: ${p.theme.colors.textSecondary};
+        &:hover {
+          background: ${p.theme.colors.border};
+        }
+      `
+  }
+`;
+
+const ModeGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+`;
+
+const ModeButton = styled.button<{ $active: boolean }>`
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 10px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background-color 150ms;
+
+  ${p => p.$active
+    ? css`
+        background: ${p.theme.colors.accent};
+        color: white;
+      `
+    : css`
+        background: ${p.theme.colors.bgTertiary};
+        color: ${p.theme.colors.textSecondary};
+        &:hover {
+          background: ${p.theme.colors.border};
+        }
+      `
+  }
+`;
+
+const PaddingFieldLabel = styled.label`
+  font-size: 10px;
+  color: ${p => p.theme.colors.textTertiary};
+`;
 
 interface PaddingValue {
   top?: number;
@@ -144,187 +337,139 @@ export function LayoutEditor({
   }, [onChange]);
 
   return (
-    <div className="space-y-3">
+    <LayoutWrapper>
       {/* Size inputs - only show when not pinned */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1">
-          <label className="text-[10px] text-[var(--text-tertiary)] mb-0.5 block">Width</label>
-          <input
+      <SizeRow>
+        <SizeField>
+          <FieldLabel>Width</FieldLabel>
+          <SizeInput
             type="number"
             value={isHorizontalPinned ? '' : (width ?? '')}
             onChange={handleWidthChange}
             disabled={isHorizontalPinned}
             placeholder={isHorizontalPinned ? 'Fill' : '100'}
-            className="w-full px-2 py-1 text-sm rounded border border-[var(--border-color)]
-                       bg-[var(--bg-primary)] text-[var(--text-primary)]
-                       focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]
-                       disabled:opacity-50 disabled:cursor-not-allowed"
           />
-        </div>
-        
-        <button
+        </SizeField>
+
+        <AspectRatioButton
           onClick={handleToggleAspectRatio}
           disabled={isHorizontalPinned && isVerticalPinned}
-          className={`
-            mt-4 p-1.5 rounded transition-colors
-            ${aspectRatioLocked 
-              ? 'bg-[var(--accent-color)] text-white' 
-              : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--border-color)]'
-            }
-            disabled:opacity-50 disabled:cursor-not-allowed
-          `}
+          $locked={aspectRatioLocked}
           title={aspectRatioLocked ? 'Unlock aspect ratio' : 'Lock aspect ratio'}
         >
-          {aspectRatioLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-        </button>
-        
-        <div className="flex-1">
-          <label className="text-[10px] text-[var(--text-tertiary)] mb-0.5 block">Height</label>
-          <input
+          {aspectRatioLocked ? <Lock size={14} /> : <Unlock size={14} />}
+        </AspectRatioButton>
+
+        <SizeField>
+          <FieldLabel>Height</FieldLabel>
+          <SizeInput
             type="number"
             value={isVerticalPinned ? '' : (height ?? '')}
             onChange={handleHeightChange}
             disabled={isVerticalPinned}
             placeholder={isVerticalPinned ? 'Fill' : '100'}
-            className="w-full px-2 py-1 text-sm rounded border border-[var(--border-color)]
-                       bg-[var(--bg-primary)] text-[var(--text-primary)]
-                       focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]
-                       disabled:opacity-50 disabled:cursor-not-allowed"
           />
-        </div>
-      </div>
+        </SizeField>
+      </SizeRow>
 
       {/* Edge pinning */}
       <div>
-        <label className="text-[10px] text-[var(--text-tertiary)] mb-1.5 block">Pin to parent edges</label>
-        <div className="grid grid-cols-4 gap-1">
+        <SectionLabel>Pin to parent edges</SectionLabel>
+        <PinGrid>
           {['top', 'bottom', 'left', 'right'].map((edge) => {
             const isPinned = pinnedEdges.includes(edge);
             return (
-              <button
+              <PinButton
                 key={edge}
                 onClick={() => handleToggleEdgePin(edge)}
-                className={`
-                  px-2 py-1.5 rounded text-[10px] font-medium capitalize
-                  transition-colors flex items-center justify-center gap-1
-                  ${isPinned 
-                    ? 'bg-[var(--accent-color)] text-white' 
-                    : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--border-color)]'
-                  }
-                `}
+                $isPinned={isPinned}
                 title={isPinned ? `Unpin from ${edge}` : `Pin to ${edge}`}
               >
-                <Pin className="w-2.5 h-2.5" />
+                <Pin size={10} />
                 {edge}
-              </button>
+              </PinButton>
             );
           })}
-        </div>
+        </PinGrid>
       </div>
 
       {/* Padding - show when any edge is pinned */}
       {pinnedEdges.length > 0 && (
         <div>
-          <label className="text-[10px] text-[var(--text-tertiary)] mb-1.5 block">Padding from edges</label>
-          <div className="grid grid-cols-2 gap-2">
+          <SectionLabel>Padding from edges</SectionLabel>
+          <PaddingGrid>
             {pinnedEdges.includes('top') && (
               <div>
-                <label className="text-[10px] text-[var(--text-tertiary)]">Top</label>
-                <input
+                <PaddingFieldLabel>Top</PaddingFieldLabel>
+                <SizeInput
                   type="number"
                   value={padding.top ?? 0}
                   onChange={(e) => handlePaddingChange('top', parseInt(e.target.value, 10) || 0)}
-                  className="w-full px-2 py-1 text-sm rounded border border-[var(--border-color)]
-                             bg-[var(--bg-primary)] text-[var(--text-primary)]
-                             focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]"
                 />
               </div>
             )}
             {pinnedEdges.includes('bottom') && (
               <div>
-                <label className="text-[10px] text-[var(--text-tertiary)]">Bottom</label>
-                <input
+                <PaddingFieldLabel>Bottom</PaddingFieldLabel>
+                <SizeInput
                   type="number"
                   value={padding.bottom ?? 0}
                   onChange={(e) => handlePaddingChange('bottom', parseInt(e.target.value, 10) || 0)}
-                  className="w-full px-2 py-1 text-sm rounded border border-[var(--border-color)]
-                             bg-[var(--bg-primary)] text-[var(--text-primary)]
-                             focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]"
                 />
               </div>
             )}
             {pinnedEdges.includes('left') && (
               <div>
-                <label className="text-[10px] text-[var(--text-tertiary)]">Leading</label>
-                <input
+                <PaddingFieldLabel>Leading</PaddingFieldLabel>
+                <SizeInput
                   type="number"
                   value={padding.leading ?? 0}
                   onChange={(e) => handlePaddingChange('leading', parseInt(e.target.value, 10) || 0)}
-                  className="w-full px-2 py-1 text-sm rounded border border-[var(--border-color)]
-                             bg-[var(--bg-primary)] text-[var(--text-primary)]
-                             focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]"
                 />
               </div>
             )}
             {pinnedEdges.includes('right') && (
               <div>
-                <label className="text-[10px] text-[var(--text-tertiary)]">Trailing</label>
-                <input
+                <PaddingFieldLabel>Trailing</PaddingFieldLabel>
+                <SizeInput
                   type="number"
                   value={padding.trailing ?? 0}
                   onChange={(e) => handlePaddingChange('trailing', parseInt(e.target.value, 10) || 0)}
-                  className="w-full px-2 py-1 text-sm rounded border border-[var(--border-color)]
-                             bg-[var(--bg-primary)] text-[var(--text-primary)]
-                             focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]"
                 />
               </div>
             )}
-          </div>
+          </PaddingGrid>
         </div>
       )}
 
       {/* Fill width toggle */}
-      <div className="flex items-center justify-between">
-        <label className="text-xs text-[var(--text-secondary)]">Fill parent width</label>
-        <button
+      <FillRow>
+        <FillLabel>Fill parent width</FillLabel>
+        <FillButton
           onClick={handleToggleFillWidth}
-          className={`
-            px-2 py-1 rounded text-xs font-medium flex items-center gap-1
-            transition-colors
-            ${fillWidth 
-              ? 'bg-[var(--accent-color)] text-white' 
-              : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--border-color)]'
-            }
-          `}
+          $active={fillWidth}
         >
-          <Maximize2 className="w-3 h-3" />
+          <Maximize2 size={12} />
           {fillWidth ? 'On' : 'Off'}
-        </button>
-      </div>
+        </FillButton>
+      </FillRow>
 
       {/* Content mode */}
       <div>
-        <label className="text-[10px] text-[var(--text-tertiary)] mb-1.5 block">Content mode</label>
-        <div className="grid grid-cols-4 gap-1">
+        <SectionLabel>Content mode</SectionLabel>
+        <ModeGrid>
           {CONTENT_MODES.map(({ value, label }) => (
-            <button
+            <ModeButton
               key={value}
               onClick={() => handleContentModeChange(value)}
-              className={`
-                px-2 py-1.5 rounded text-[10px] font-medium
-                transition-colors
-                ${contentMode === value 
-                  ? 'bg-[var(--accent-color)] text-white' 
-                  : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--border-color)]'
-                }
-              `}
+              $active={contentMode === value}
               title={CONTENT_MODES.find(m => m.value === value)?.description}
             >
               {label}
-            </button>
+            </ModeButton>
           ))}
-        </div>
+        </ModeGrid>
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }

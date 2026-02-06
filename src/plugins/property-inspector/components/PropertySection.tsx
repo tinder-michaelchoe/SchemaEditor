@@ -1,5 +1,45 @@
 import React, { useState } from 'react';
+import styled from 'styled-components';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+
+const SectionWrapper = styled.div`
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+
+  &:last-child {
+    border-bottom: 0;
+  }
+`;
+
+const SectionButton = styled.button`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: ${p => p.theme.colors.textSecondary};
+  transition: background-color 150ms;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+`;
+
+const SectionTitle = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const SectionContent = styled.div`
+  padding: 0 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
 
 interface PropertySectionProps {
   title: string;
@@ -15,26 +55,17 @@ export function PropertySection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-[var(--border-color)] last:border-b-0">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="
-          w-full flex items-center gap-2 px-4 py-2
-          text-left hover:bg-[var(--bg-tertiary)]
-          transition-colors duration-150
-        "
-      >
+    <SectionWrapper>
+      <SectionButton onClick={() => setIsOpen(!isOpen)}>
         {isOpen ? (
-          <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />
+          <ChevronDown size={16} color="currentColor" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-[var(--text-secondary)]" />
+          <ChevronRight size={16} color="currentColor" />
         )}
-        <span className="text-sm font-medium text-[var(--text-primary)]">
-          {title}
-        </span>
-      </button>
+        <SectionTitle>{title}</SectionTitle>
+      </SectionButton>
 
-      {isOpen && <div className="px-4 pb-4 space-y-3">{children}</div>}
-    </div>
+      {isOpen && <SectionContent>{children}</SectionContent>}
+    </SectionWrapper>
   );
 }

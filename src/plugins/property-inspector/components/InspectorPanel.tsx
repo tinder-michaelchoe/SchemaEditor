@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import styled from 'styled-components';
 import { useEditorStore } from '@/store/editorStore';
 import { getValueAtPath, stringToPath } from '@/utils/pathUtils';
 import { PropertySection } from './PropertySection';
@@ -11,6 +12,52 @@ import { EnumEditor } from '../editors/EnumEditor';
 import { ImageEditor } from '../editors/ImageEditor';
 import { LayoutEditor } from '../editors/LayoutEditor';
 import type { JSONSchema } from '@/types/schema';
+
+const ValueHint = styled.span`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const NullValue = styled.span`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textTertiary};
+  font-style: italic;
+`;
+
+const ValueText = styled.span`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const SimpleWrapper = styled.div`
+  height: 100%;
+  padding: 1rem;
+`;
+
+const PanelWrapper = styled.div`
+  height: 100%;
+  overflow-y: auto;
+`;
+
+const TypeBadge = styled.span`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textPrimary};
+  font-family: monospace;
+  background: ${p => p.theme.colors.bgTertiary};
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+`;
+
+const PathBadge = styled.span`
+  font-size: 0.75rem;
+  color: ${p => p.theme.colors.textTertiary};
+  font-family: monospace;
+  background: ${p => p.theme.colors.bgTertiary};
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  word-break: break-all;
+  display: block;
+`;
 
 export function InspectorPanel() {
   const {
@@ -133,9 +180,9 @@ export function InspectorPanel() {
     if (valueType === 'object' && value !== null) {
       if (Array.isArray(value)) {
         return (
-          <span className="text-sm text-[var(--text-tertiary)]">
+          <ValueHint>
             [{value.length} items]
-          </span>
+          </ValueHint>
         );
       }
       
@@ -151,20 +198,20 @@ export function InspectorPanel() {
       }
       
       return (
-        <span className="text-sm text-[var(--text-tertiary)]">
+        <ValueHint>
           {'{...}'}
-        </span>
+        </ValueHint>
       );
     }
 
     if (value === null) {
       return (
-        <span className="text-sm text-[var(--text-tertiary)] italic">null</span>
+        <NullValue>null</NullValue>
       );
     }
 
     return (
-      <span className="text-sm text-[var(--text-primary)]">{String(value)}</span>
+      <ValueText>{String(value)}</ValueText>
     );
   };
 
@@ -222,18 +269,18 @@ export function InspectorPanel() {
 
   if (!selectedValue || typeof selectedValue !== 'object') {
     return (
-      <div className="h-full p-4">
+      <SimpleWrapper>
         <PropertyRow label="Value">
           {renderEditor('value', selectedValue, propertySchema ?? undefined)}
         </PropertyRow>
-      </div>
+      </SimpleWrapper>
     );
   }
 
   const valueObj = selectedValue as Record<string, unknown>;
 
   return (
-    <div className="h-full overflow-y-auto">
+    <PanelWrapper>
       {/* Property sections */}
       {Array.from(groupedProperties.entries()).map(([group, props]) => (
         <PropertySection key={group} title={group} defaultOpen={group === 'General'}>
@@ -241,14 +288,14 @@ export function InspectorPanel() {
           {group === 'General' && valueObj.type && (
             <>
               <PropertyRow label="type">
-                <span className="text-sm text-[var(--text-primary)] font-mono bg-[var(--bg-tertiary)] px-2 py-1 rounded">
+                <TypeBadge>
                   {String(valueObj.type)}
-                </span>
+                </TypeBadge>
               </PropertyRow>
               <PropertyRow label="path">
-                <span className="text-xs text-[var(--text-tertiary)] font-mono bg-[var(--bg-tertiary)] px-2 py-1 rounded break-all block">
+                <PathBadge>
                   {selectedPath}
-                </span>
+                </PathBadge>
               </PropertyRow>
             </>
           )}
@@ -299,6 +346,6 @@ export function InspectorPanel() {
 
       {/* Styles Panel */}
       <StylesPanel />
-    </div>
+    </PanelWrapper>
   );
 }

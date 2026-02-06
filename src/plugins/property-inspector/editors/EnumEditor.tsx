@@ -1,4 +1,86 @@
 import React from 'react';
+import styled, { css } from 'styled-components';
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 0.25rem;
+`;
+
+const OptionButton = styled.button<{ $active: boolean; $disabled: boolean }>`
+  flex: 1;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid;
+  transition: color 150ms, background-color 150ms, border-color 150ms;
+  cursor: ${p => (p.$disabled ? 'not-allowed' : 'pointer')};
+  opacity: ${p => (p.$disabled ? 0.5 : 1)};
+
+  ${p =>
+    p.$active
+      ? css`
+          background-color: ${p.theme.colors.accent};
+          border-color: ${p.theme.colors.accent};
+          color: white;
+        `
+      : css`
+          background-color: ${p.theme.colors.bgPrimary};
+          border-color: ${p.theme.colors.border};
+          color: ${p.theme.colors.textPrimary};
+
+          &:hover {
+            border-color: ${p.theme.colors.accent};
+          }
+        `}
+`;
+
+const RadioGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const RadioLabel = styled.label<{ $disabled: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  cursor: ${p => (p.$disabled ? 'not-allowed' : 'pointer')};
+  opacity: ${p => (p.$disabled ? 0.5 : 1)};
+
+  &:hover {
+    background-color: ${p => p.theme.colors.bgTertiary};
+  }
+`;
+
+const RadioInput = styled.input`
+  accent-color: ${p => p.theme.colors.accent};
+`;
+
+const RadioText = styled.span`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const StyledSelect = styled.select<{ $disabled: boolean }>`
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0.375rem;
+  background: ${p => p.theme.colors.bgPrimary};
+  border: 1px solid ${p => p.theme.colors.border};
+  color: ${p => p.theme.colors.textPrimary};
+  cursor: ${p => (p.$disabled ? 'not-allowed' : 'pointer')};
+  opacity: ${p => (p.$disabled ? 0.5 : 1)};
+
+  &:focus {
+    outline: none;
+    border-color: ${p => p.theme.colors.accent};
+  }
+`;
 
 interface EnumEditorProps {
   value: string;
@@ -17,75 +99,53 @@ export function EnumEditor({
 }: EnumEditorProps) {
   if (displayMode === 'buttons' && options.length <= 4) {
     return (
-      <div className="flex gap-1">
+      <ButtonGroup>
         {options.map((option) => (
-          <button
+          <OptionButton
             key={option.value}
             onClick={() => !disabled && onChange(option.value)}
             disabled={disabled}
-            className={`
-              flex-1 px-2 py-1.5 text-xs rounded-md
-              border transition-colors duration-150
-              ${
-                value === option.value
-                  ? 'bg-[var(--accent-color)] border-[var(--accent-color)] text-white'
-                  : 'bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-primary)] hover:border-[var(--accent-color)]'
-              }
-              ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-            `}
+            $active={value === option.value}
+            $disabled={disabled}
           >
             {option.label}
-          </button>
+          </OptionButton>
         ))}
-      </div>
+      </ButtonGroup>
     );
   }
 
   if (displayMode === 'radio') {
     return (
-      <div className="space-y-1">
+      <RadioGroup>
         {options.map((option) => (
-          <label
-            key={option.value}
-            className={`
-              flex items-center gap-2 p-2 rounded-md cursor-pointer
-              hover:bg-[var(--bg-tertiary)]
-              ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-          >
-            <input
+          <RadioLabel key={option.value} $disabled={disabled}>
+            <RadioInput
               type="radio"
               checked={value === option.value}
               onChange={() => onChange(option.value)}
               disabled={disabled}
-              className="accent-[var(--accent-color)]"
             />
-            <span className="text-sm text-[var(--text-primary)]">{option.label}</span>
-          </label>
+            <RadioText>{option.label}</RadioText>
+          </RadioLabel>
         ))}
-      </div>
+      </RadioGroup>
     );
   }
 
   // Default: select dropdown
   return (
-    <select
+    <StyledSelect
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
-      className={`
-        w-full px-2 py-1.5 text-sm rounded-md
-        bg-[var(--bg-primary)] border border-[var(--border-color)]
-        focus:outline-none focus:border-[var(--accent-color)]
-        text-[var(--text-primary)]
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-      `}
+      $disabled={disabled}
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}
         </option>
       ))}
-    </select>
+    </StyledSelect>
   );
 }
