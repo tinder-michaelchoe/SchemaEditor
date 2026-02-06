@@ -237,7 +237,7 @@ export function OutputPanel() {
       {/* Tab Content */}
       <ContentArea>
         {activeTab === 'preview' ? (
-          <DevicePreview data={data} className="h-full" />
+          <DevicePreview data={data} />
         ) : (
           <RawJSONPreview
             data={displayData}
@@ -245,7 +245,6 @@ export function OutputPanel() {
             editingPath={editingPath}
             onSelectPath={handleSelectFromPreview}
             wrapText={isJsonWrapEnabled}
-            className="h-full"
           />
         )}
       </ContentArea>

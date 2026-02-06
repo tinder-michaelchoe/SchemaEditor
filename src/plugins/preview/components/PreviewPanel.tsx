@@ -49,7 +49,7 @@ export function PreviewPanel() {
         <HeaderTitle>Device Preview</HeaderTitle>
       </PanelHeader>
       <ContentArea>
-        <DevicePreview data={data} className="h-full" />
+        <DevicePreview data={data} />
       </ContentArea>
     </PanelWrapper>
   );

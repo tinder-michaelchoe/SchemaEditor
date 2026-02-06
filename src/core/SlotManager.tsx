@@ -7,10 +7,66 @@
  */
 
 import React, { Component, useMemo, type ReactNode, type ErrorInfo } from 'react';
+import styled from 'styled-components';
 import type { UISlot, SlotProps, SlotRegistration } from './types/plugin';
 import type { RegisteredSlotComponent, SlotComponentProps, WhenContext } from './types/slots';
 import { evaluateWhenCondition, SLOT_CONFIG } from './types/slots';
 import { pluginRegistry } from './PluginRegistry';
+
+// Styled components for PluginCrashedUI
+const CrashedWrapper = styled.div`
+  padding: 1rem;
+  background: ${p => p.theme.colors.error}1a;
+  border: 1px solid ${p => p.theme.colors.error};
+  border-radius: ${p => p.theme.radii.lg};
+`;
+
+const CrashedHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: ${p => p.theme.colors.error};
+  margin-bottom: 0.5rem;
+`;
+
+const CrashedTitle = styled.span`
+  font-weight: 500;
+`;
+
+const CrashedMessage = styled.p`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.error};
+  margin-bottom: 0.5rem;
+`;
+
+const CrashedCode = styled.code`
+  background: ${p => p.theme.colors.error}1a;
+  padding: 0 0.25rem;
+  border-radius: ${p => p.theme.radii.sm};
+`;
+
+const CrashedPre = styled.pre`
+  font-size: 0.75rem;
+  background: ${p => p.theme.colors.error}1a;
+  padding: 0.5rem;
+  border-radius: ${p => p.theme.radii.sm};
+  overflow: auto;
+  margin-bottom: 0.5rem;
+  max-height: 8rem;
+`;
+
+const RetryButton = styled.button`
+  font-size: 0.875rem;
+  color: ${p => p.theme.colors.error};
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
 
 // ============================================================================
 // Error Boundary Component
@@ -85,10 +141,11 @@ interface PluginCrashedUIProps {
  */
 function PluginCrashedUI({ pluginId, error, onRetry }: PluginCrashedUIProps) {
   return (
-    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-      <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-2">
+    <CrashedWrapper>
+      <CrashedHeader>
         <svg
-          className="w-5 h-5"
+          width={20}
+          height={20}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -100,23 +157,20 @@ function PluginCrashedUI({ pluginId, error, onRetry }: PluginCrashedUIProps) {
             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
           />
         </svg>
-        <span className="font-medium">Plugin Error</span>
-      </div>
-      <p className="text-sm text-red-700 dark:text-red-300 mb-2">
-        Plugin <code className="bg-red-100 dark:bg-red-900/40 px-1 rounded">{pluginId}</code> encountered an error.
-      </p>
+        <CrashedTitle>Plugin Error</CrashedTitle>
+      </CrashedHeader>
+      <CrashedMessage>
+        Plugin <CrashedCode>{pluginId}</CrashedCode> encountered an error.
+      </CrashedMessage>
       {error && (
-        <pre className="text-xs bg-red-100 dark:bg-red-900/40 p-2 rounded overflow-auto mb-2 max-h-32">
+        <CrashedPre>
           {error.message}
-        </pre>
+        </CrashedPre>
       )}
-      <button
-        onClick={onRetry}
-        className="text-sm text-red-600 dark:text-red-400 hover:underline"
-      >
+      <RetryButton onClick={onRetry}>
         Try again
-      </button>
-    </div>
+      </RetryButton>
+    </CrashedWrapper>
   );
 }
 
