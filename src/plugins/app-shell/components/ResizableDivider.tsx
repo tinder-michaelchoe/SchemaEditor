@@ -1,26 +1,45 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import styled, { css } from 'styled-components';
 
 interface ResizableDividerProps {
   direction: 'horizontal' | 'vertical';
   onResize: (delta: number) => void;
   onResizeEnd?: () => void;
-  className?: string;
 }
 
-export function ResizableDivider({
-  direction,
-  onResize,
-  onResizeEnd,
-  className = '',
-}: ResizableDividerProps) {
+const Divider = styled.div<{ $horizontal: boolean; $dragging: boolean }>`
+  flex-shrink: 0;
+  background: ${p => (p.$dragging ? p.theme.colors.accent : p.theme.colors.border)};
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: ${p => p.theme.colors.accent};
+  }
+
+  ${p =>
+    p.$horizontal
+      ? css`
+          width: 4px;
+          cursor: col-resize;
+        `
+      : css`
+          height: 4px;
+          cursor: row-resize;
+        `}
+`;
+
+export function ResizableDivider({ direction, onResize, onResizeEnd }: ResizableDividerProps) {
   const [isDragging, setIsDragging] = useState(false);
   const startPosRef = useRef<number>(0);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    startPosRef.current = direction === 'horizontal' ? e.clientX : e.clientY;
-  }, [direction]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+      startPosRef.current = direction === 'horizontal' ? e.clientX : e.clientY;
+    },
+    [direction],
+  );
 
   useEffect(() => {
     if (!isDragging) return;
@@ -39,8 +58,6 @@ export function ResizableDivider({
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-    
-    // Set cursor style on body during drag
     document.body.style.cursor = direction === 'horizontal' ? 'col-resize' : 'row-resize';
     document.body.style.userSelect = 'none';
 
@@ -52,22 +69,13 @@ export function ResizableDivider({
     };
   }, [isDragging, direction, onResize, onResizeEnd]);
 
-  const isHorizontal = direction === 'horizontal';
-
   return (
-    <div
+    <Divider
       onMouseDown={handleMouseDown}
-      className={`
-        flex-shrink-0 
-        ${isHorizontal ? 'w-1 cursor-col-resize' : 'h-1 cursor-row-resize'}
-        bg-[var(--border-color)] 
-        hover:bg-[var(--accent-color)]
-        transition-colors duration-150
-        ${isDragging ? 'bg-[var(--accent-color)]' : ''}
-        ${className}
-      `}
+      $horizontal={direction === 'horizontal'}
+      $dragging={isDragging}
       role="separator"
-      aria-orientation={isHorizontal ? 'vertical' : 'horizontal'}
+      aria-orientation={direction === 'horizontal' ? 'vertical' : 'horizontal'}
     />
   );
 }

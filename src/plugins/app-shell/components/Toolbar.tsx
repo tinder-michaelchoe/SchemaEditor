@@ -1,26 +1,85 @@
 import React, { ReactNode } from 'react';
 import { Moon, Sun, AlertCircle, CheckCircle } from 'lucide-react';
+import styled from 'styled-components';
 import { Button } from '@/components/ui/Button';
 
 interface ToolbarProps {
-  // Schema state
   hasSchema: boolean;
   isValid: boolean;
   errorCount: number;
-  
-  // Theme
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
-  
-  // Error handling
   onShowErrors: () => void;
-  
-  // Import/Export slot
   importExportSlot?: ReactNode;
-  
-  // Additional toolbar items
   children?: ReactNode;
 }
+
+const Header = styled.header`
+  flex-shrink: 0;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgSecondary};
+`;
+
+const TopRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+`;
+
+const LeftGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const Title = styled.h1`
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: ${p => p.theme.colors.textPrimary};
+  margin: 0;
+`;
+
+const StatusGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const ValidStatus = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: ${p => p.theme.colors.success};
+  font-size: 0.875rem;
+`;
+
+const ErrorStatus = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: ${p => p.theme.colors.error};
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const RightGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const Separator = styled.div`
+  width: 1px;
+  height: 1.5rem;
+  background: ${p => p.theme.colors.border};
+`;
 
 export function Toolbar({
   hasSchema,
@@ -33,58 +92,44 @@ export function Toolbar({
   children,
 }: ToolbarProps) {
   return (
-    <header className="flex-shrink-0 border-b border-[var(--border-color)] bg-[var(--bg-secondary)]">
-      {/* Top Row */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-[var(--text-primary)]">
-            Schema Editor
-          </h1>
-          
-          {hasSchema && (
-            <div className="flex items-center gap-2">
-              {isValid ? (
-                <div className="flex items-center gap-1 text-[var(--success-color)]">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm">Valid</span>
-                </div>
-              ) : (
-                <button
-                  onClick={onShowErrors}
-                  className="flex items-center gap-1 text-[var(--error-color)] hover:underline cursor-pointer"
-                  title="Click to show errors"
-                >
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm">{errorCount} error{errorCount !== 1 ? 's' : ''}</span>
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+    <Header>
+      <TopRow>
+        <LeftGroup>
+          <Title>Schema Editor</Title>
 
-        <div className="flex items-center gap-2">
-          {/* Import/Export slot */}
+          {hasSchema && (
+            <StatusGroup>
+              {isValid ? (
+                <ValidStatus>
+                  <CheckCircle size={16} />
+                  <span>Valid</span>
+                </ValidStatus>
+              ) : (
+                <ErrorStatus onClick={onShowErrors} title="Click to show errors">
+                  <AlertCircle size={16} />
+                  <span>
+                    {errorCount} error{errorCount !== 1 ? 's' : ''}
+                  </span>
+                </ErrorStatus>
+              )}
+            </StatusGroup>
+          )}
+        </LeftGroup>
+
+        <RightGroup>
           {importExportSlot}
-          
-          <div className="w-px h-6 bg-[var(--border-color)]" />
-          
+          <Separator />
           <Button
             variant="ghost"
             size="sm"
             onClick={onToggleDarkMode}
             title={isDarkMode ? 'Light mode' : 'Dark mode'}
           >
-            {isDarkMode ? (
-              <Sun className="w-4 h-4" />
-            ) : (
-              <Moon className="w-4 h-4" />
-            )}
+            {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
           </Button>
-          
-          {/* Additional toolbar items */}
           {children}
-        </div>
-      </div>
-    </header>
+        </RightGroup>
+      </TopRow>
+    </Header>
   );
 }

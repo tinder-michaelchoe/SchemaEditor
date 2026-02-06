@@ -1,4 +1,5 @@
 import React, { useCallback, ReactNode } from 'react';
+import styled from 'styled-components';
 import { TabbedPanel } from './TabbedPanel';
 import type { TabDefinition } from './TabbedPanel';
 import { ResizableDivider } from './ResizableDivider';
@@ -10,26 +11,113 @@ const MIN_PANEL_WIDTH = 250;
 const MAX_PANEL_WIDTH = 800;
 
 interface AppShellProps {
-  // Left panel tabs (Preview, JSON Output)
   leftTabs: TabDefinition[];
-
-  // Right panel tabs (Tree, Canvas, Split)
   rightTabs: TabDefinition[];
-
-  // Error Console (collapsible bottom panel)
   errorConsole?: ReactNode;
-
-  // Schema state for toolbar
   hasSchema: boolean;
   isValid: boolean;
   errorCount: number;
-
-  // Toolbar actions
   onShowErrors: () => void;
-
-  // Import/Export component
   importExportSlot?: ReactNode;
 }
+
+const ShellWrapper = styled.div`
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: ${p => p.theme.colors.bgPrimary};
+`;
+
+const Main = styled.main`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+`;
+
+const PanelRow = styled.div`
+  flex: 1;
+  display: flex;
+  min-height: 0;
+`;
+
+const CollapsedBar = styled.div`
+  flex-shrink: 0;
+  width: 3rem;
+  background: ${p => p.theme.colors.bgSecondary};
+  border-right: 1px solid ${p => p.theme.colors.border};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0.5rem;
+`;
+
+const CollapseToggleButton = styled.button`
+  padding: 0.5rem;
+  border-radius: ${p => p.theme.radii.md};
+  background: none;
+  border: none;
+  color: ${p => p.theme.colors.textSecondary};
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgPrimary};
+    color: ${p => p.theme.colors.textPrimary};
+  }
+`;
+
+const LeftPanelExpanded = styled.div`
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: ${p => p.theme.colors.bgSecondary};
+  position: relative;
+`;
+
+const CollapseButton = styled.button`
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  padding: 0.25rem;
+  border-radius: ${p => p.theme.radii.md};
+  background: none;
+  border: none;
+  color: ${p => p.theme.colors.textSecondary};
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgPrimary};
+    color: ${p => p.theme.colors.textPrimary};
+  }
+`;
+
+const CenterPanel = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+`;
+
+const Placeholder = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${p => p.theme.colors.textTertiary};
+  text-align: center;
+`;
+
+const PlaceholderTitle = styled.p`
+  font-size: 1.125rem;
+  margin-bottom: 0.5rem;
+`;
+
+const PlaceholderSubtitle = styled.p`
+  font-size: 0.875rem;
+`;
 
 export function AppShell({
   leftTabs,
@@ -54,20 +142,19 @@ export function AppShell({
     setIsLeftPanelCollapsed,
   } = usePersistence();
 
-  // Handle left panel resize
-  const handleLeftPanelResize = useCallback((delta: number) => {
-    setLeftPanelWidth(
-      Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, leftPanelWidth + delta))
-    );
-  }, [leftPanelWidth, setLeftPanelWidth]);
+  const handleLeftPanelResize = useCallback(
+    (delta: number) => {
+      setLeftPanelWidth(Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, leftPanelWidth + delta)));
+    },
+    [leftPanelWidth, setLeftPanelWidth],
+  );
 
   const toggleDarkMode = useCallback(() => {
     setDarkMode(!isDarkMode);
   }, [isDarkMode, setDarkMode]);
 
   return (
-    <div className="h-screen flex flex-col bg-[var(--bg-primary)]">
-      {/* Toolbar */}
+    <ShellWrapper>
       <Toolbar
         hasSchema={hasSchema}
         isValid={isValid}
@@ -78,80 +165,52 @@ export function AppShell({
         importExportSlot={importExportSlot}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 flex min-h-0">
-          {/* Left Panel - Preview/JSON Output */}
+      <Main>
+        <PanelRow>
           {hasSchema && leftTabs.length > 0 && (
             <>
               {isLeftPanelCollapsed ? (
-                /* Collapsed state - thin bar with expand button */
-                <div className="flex-shrink-0 w-12 bg-[var(--bg-secondary)] border-r border-[var(--border-color)] flex flex-col items-center py-2">
-                  <button
+                <CollapsedBar>
+                  <CollapseToggleButton
                     onClick={() => setIsLeftPanelCollapsed(false)}
-                    className="p-2 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                     title="Expand Output Panel"
                   >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
+                    <ChevronRight size={20} />
+                  </CollapseToggleButton>
+                </CollapsedBar>
               ) : (
-                /* Expanded state */
                 <>
-                  <div
-                    className="flex-shrink-0 flex flex-col bg-[var(--bg-secondary)] relative"
-                    style={{ width: leftPanelWidth }}
-                  >
-                    {/* Collapse button */}
-                    <button
+                  <LeftPanelExpanded style={{ width: leftPanelWidth }}>
+                    <CollapseButton
                       onClick={() => setIsLeftPanelCollapsed(true)}
-                      className="absolute top-2 right-2 z-10 p-1 rounded hover:bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                       title="Collapse Output Panel"
                     >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-
-                    <TabbedPanel
-                      tabs={leftTabs}
-                      activeTab={leftPanelTab}
-                      onTabChange={setLeftPanelTab}
-                      className="h-full"
-                    />
-                  </div>
-
-                  <ResizableDivider
-                    direction="horizontal"
-                    onResize={handleLeftPanelResize}
-                  />
+                      <ChevronLeft size={16} />
+                    </CollapseButton>
+                    <TabbedPanel tabs={leftTabs} activeTab={leftPanelTab} onTabChange={setLeftPanelTab} />
+                  </LeftPanelExpanded>
+                  <ResizableDivider direction="horizontal" onResize={handleLeftPanelResize} />
                 </>
               )}
             </>
           )}
 
-          {/* Center Panel - Tree/Canvas Editor */}
-          <div className="flex-1 min-w-0 flex flex-col">
+          <CenterPanel>
             {hasSchema && rightTabs.length > 0 ? (
-              <TabbedPanel
-                tabs={rightTabs}
-                activeTab={rightPanelTab}
-                onTabChange={setRightPanelTab}
-                className="h-full"
-              />
+              <TabbedPanel tabs={rightTabs} activeTab={rightPanelTab} onTabChange={setRightPanelTab} />
             ) : (
-              // Show placeholder when no schema loaded
-              <div className="flex-1 flex items-center justify-center text-[var(--text-tertiary)]">
-                <div className="text-center">
-                  <p className="text-lg mb-2">No schema loaded</p>
-                  <p className="text-sm">Load a JSON Schema to start editing</p>
+              <Placeholder>
+                <div>
+                  <PlaceholderTitle>No schema loaded</PlaceholderTitle>
+                  <PlaceholderSubtitle>Load a JSON Schema to start editing</PlaceholderSubtitle>
                 </div>
-              </div>
+              </Placeholder>
             )}
-          </div>
-        </div>
+          </CenterPanel>
+        </PanelRow>
 
-        {/* Error Console (Bottom) */}
         {hasSchema && errorConsole}
-      </main>
-    </div>
+      </Main>
+    </ShellWrapper>
   );
 }

@@ -1,4 +1,5 @@
-import React, { useState, useCallback, ReactNode } from 'react';
+import React, { ReactNode } from 'react';
+import styled, { css } from 'styled-components';
 
 export interface TabDefinition {
   id: string;
@@ -12,57 +13,84 @@ interface TabbedPanelProps {
   tabs: TabDefinition[];
   activeTab: string;
   onTabChange: (tabId: string) => void;
-  className?: string;
-  headerClassName?: string;
-  contentClassName?: string;
 }
 
-export function TabbedPanel({
-  tabs,
-  activeTab,
-  onTabChange,
-  className = '',
-  headerClassName = '',
-  contentClassName = '',
-}: TabbedPanelProps) {
-  // Sort tabs by priority
+const PanelWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+`;
+
+const TabHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+  background: ${p => p.theme.colors.bgSecondary};
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+
+  ${p =>
+    p.$active
+      ? css`
+          background: ${p.theme.colors.bgPrimary};
+          color: ${p.theme.colors.textPrimary};
+          box-shadow: ${p.theme.shadows.sm};
+        `
+      : css`
+          background: transparent;
+          color: ${p.theme.colors.textSecondary};
+          &:hover {
+            color: ${p.theme.colors.textPrimary};
+            background: ${p.theme.colors.bgTertiary};
+          }
+        `}
+`;
+
+const IconWrapper = styled.span`
+  width: 1rem;
+  height: 1rem;
+`;
+
+const TabContent = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+`;
+
+export function TabbedPanel({ tabs, activeTab, onTabChange }: TabbedPanelProps) {
   const sortedTabs = [...tabs].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-  
+
   const activeTabDef = sortedTabs.find(t => t.id === activeTab) ?? sortedTabs[0];
   const ActiveComponent = activeTabDef?.component;
 
-  // Hide header if there's only one tab with no label or icon
   const shouldShowHeader = sortedTabs.length > 1 || sortedTabs.some(t => t.label || t.icon);
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
-      {/* Tab Header - hidden when single tab with no label */}
+    <PanelWrapper>
       {shouldShowHeader && (
-        <div className={`flex items-center gap-1 px-2 py-1 border-b border-[var(--border-color)] bg-[var(--bg-secondary)] ${headerClassName}`}>
-          {sortedTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={`
-                flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md
-                transition-colors duration-150
-                ${activeTab === tab.id
-                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
-                }
-              `}
-            >
-              {tab.icon && <span className="w-4 h-4">{tab.icon}</span>}
+        <TabHeader>
+          {sortedTabs.map(tab => (
+            <TabButton key={tab.id} $active={activeTab === tab.id} onClick={() => onTabChange(tab.id)}>
+              {tab.icon && <IconWrapper>{tab.icon}</IconWrapper>}
               {tab.label}
-            </button>
+            </TabButton>
           ))}
-        </div>
+        </TabHeader>
       )}
-
-      {/* Tab Content */}
-      <div className={`flex-1 min-h-0 overflow-hidden ${contentClassName}`}>
-        {ActiveComponent && <ActiveComponent />}
-      </div>
-    </div>
+      <TabContent>{ActiveComponent && <ActiveComponent />}</TabContent>
+    </PanelWrapper>
   );
 }
