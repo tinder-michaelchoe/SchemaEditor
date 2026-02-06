@@ -5,7 +5,250 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Send, Loader2, Copy, CheckCircle } from 'lucide-react';
+import styled, { css } from 'styled-components';
+import { spin } from '@/styles/mixins';
 import type { ChatMessage } from '../../types/litellm';
+
+/* ------------------------------------------------------------------ */
+/*  Styled Components                                                  */
+/* ------------------------------------------------------------------ */
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+`;
+
+const MessagesList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  color: ${p => p.theme.colors.textTertiary};
+  padding: 32px 0;
+`;
+
+const EmptyText = styled.p`
+  font-size: ${p => p.theme.fontSizes.sm};
+`;
+
+const MessageRow = styled.div<{ $role: string }>`
+  display: flex;
+  ${p =>
+    p.$role === 'user'
+      ? css`justify-content: flex-end;`
+      : p.$role === 'system'
+      ? css`justify-content: center;`
+      : css`justify-content: flex-start;`}
+`;
+
+const MessageBubble = styled.div<{ $role: string; $isError?: boolean }>`
+  max-width: 80%;
+  border-radius: 8px;
+  padding: 8px 16px;
+
+  ${p =>
+    p.$role === 'user'
+      ? css`
+          background: #3b82f6;
+          color: #ffffff;
+        `
+      : p.$role === 'system'
+      ? p.$isError
+        ? css`
+            background: #fee2e2;
+            color: #7f1d1d;
+            font-size: ${p.theme.fontSizes.sm};
+          `
+        : css`
+            background: #fef9c3;
+            color: #713f12;
+            font-size: ${p.theme.fontSizes.sm};
+          `
+      : css`
+          background: ${p.theme.colors.bgTertiary};
+          color: ${p.theme.colors.textPrimary};
+        `}
+`;
+
+const MessageContent = styled.div`
+  white-space: pre-wrap;
+  word-wrap: break-word;
+`;
+
+const ErrorDetailsSection = styled.div`
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #fca5a5;
+`;
+
+const ErrorDetailsHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+`;
+
+const ErrorDetailsLabel = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  font-weight: 600;
+`;
+
+const CopyErrorButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #fecaca;
+  border-radius: 4px;
+  font-size: ${p => p.theme.fontSizes.xs};
+  transition: background-color 0.15s;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    background: #fca5a5;
+  }
+`;
+
+const ErrorDetailsBlock = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  font-family: ${p => p.theme.fonts.mono};
+  background: #fef2f2;
+  padding: 8px;
+  border-radius: 4px;
+  overflow: auto;
+  max-height: 128px;
+`;
+
+const ValidationSection = styled.div`
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid ${p => p.theme.colors.border};
+`;
+
+const ValidationTitle = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  font-weight: 600;
+  color: #ef4444;
+  margin-bottom: 4px;
+`;
+
+const ValidationList = styled.ul`
+  font-size: ${p => p.theme.fontSizes.xs};
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+`;
+
+const ValidationItem = styled.li`
+  color: #ef4444;
+`;
+
+const Timestamp = styled.div<{ $role: string }>`
+  font-size: ${p => p.theme.fontSizes.xs};
+  margin-top: 4px;
+  opacity: 0.7;
+  text-align: ${p => (p.$role === 'user' ? 'right' : 'left')};
+`;
+
+const GeneratingRow = styled.div`
+  display: flex;
+  justify-content: flex-start;
+`;
+
+const GeneratingBubble = styled.div`
+  background: ${p => p.theme.colors.bgTertiary};
+  color: ${p => p.theme.colors.textPrimary};
+  border-radius: 8px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const SpinningLoader = styled(Loader2)`
+  animation: ${spin} 1s linear infinite;
+`;
+
+const GeneratingText = styled.span`
+  font-size: ${p => p.theme.fontSizes.sm};
+`;
+
+const InputArea = styled.div`
+  border-top: 1px solid ${p => p.theme.colors.border};
+  padding: 16px;
+`;
+
+const InputRow = styled.div`
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+`;
+
+const StyledTextarea = styled.textarea`
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 8px;
+  resize: none;
+  min-height: 40px;
+  max-height: 120px;
+  background: ${p => p.theme.colors.bgPrimary};
+  color: ${p => p.theme.colors.textPrimary};
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px ${p => p.theme.colors.accent};
+  }
+
+  &:disabled {
+    background: ${p => p.theme.colors.bgSecondary};
+    cursor: not-allowed;
+  }
+`;
+
+const SendButton = styled.button`
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: #ffffff;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: #2563eb;
+  }
+
+  &:disabled {
+    background: ${p => p.theme.colors.bgTertiary};
+    cursor: not-allowed;
+  }
+`;
+
+const HintText = styled.div`
+  margin-top: 4px;
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+/* ------------------------------------------------------------------ */
+/*  Props                                                              */
+/* ------------------------------------------------------------------ */
 
 interface ChatInterfaceProps {
   messages: ChatMessage[];
@@ -61,147 +304,109 @@ export function ChatInterface({
   };
 
   return (
-    <div className="chat-interface flex flex-col h-full">
+    <Container>
       {/* Messages List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <MessagesList>
         {messages.length === 0 ? (
-          <div className="text-center text-gray-400 py-8">
-            <p className="text-sm">Start by describing the UI you want to create</p>
-          </div>
+          <EmptyState>
+            <EmptyText>Start by describing the UI you want to create</EmptyText>
+          </EmptyState>
         ) : (
           messages.map((message, index) => (
-            <div
-              key={index}
-              className={`
-                flex
-                ${message.role === 'user' ? 'justify-end' : message.role === 'system' ? 'justify-center' : 'justify-start'}
-              `}
-            >
-              <div
-                className={`
-                  max-w-[80%] rounded-lg px-4 py-2
-                  ${
-                    message.role === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : message.role === 'system'
-                      ? message.isError
-                        ? 'bg-red-100 text-red-900 text-sm'
-                        : 'bg-yellow-100 text-yellow-900 text-sm'
-                      : 'bg-gray-200 text-gray-900'
-                  }
-                `}
-              >
-                <div className="whitespace-pre-wrap break-words">
+            <MessageRow key={index} $role={message.role}>
+              <MessageBubble $role={message.role} $isError={message.isError}>
+                <MessageContent>
                   {message.content}
-                </div>
+                </MessageContent>
                 {message.isError && message.errorDetails && (
-                  <div className="mt-2 pt-2 border-t border-red-300">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-xs font-semibold">Full Error Details:</div>
-                      <button
+                  <ErrorDetailsSection>
+                    <ErrorDetailsHeader>
+                      <ErrorDetailsLabel>Full Error Details:</ErrorDetailsLabel>
+                      <CopyErrorButton
                         onClick={() => handleCopyError(message.errorDetails!, index)}
-                        className="flex items-center gap-1 px-2 py-1 bg-red-200 hover:bg-red-300 rounded text-xs transition-colors"
                         title="Copy error details"
                       >
                         {copiedIndex === index ? (
                           <>
-                            <CheckCircle className="w-3 h-3" />
+                            <CheckCircle size={12} />
                             <span>Copied!</span>
                           </>
                         ) : (
                           <>
-                            <Copy className="w-3 h-3" />
+                            <Copy size={12} />
                             <span>Copy</span>
                           </>
                         )}
-                      </button>
-                    </div>
-                    <div className="text-xs font-mono bg-red-50 p-2 rounded overflow-auto max-h-32">
+                      </CopyErrorButton>
+                    </ErrorDetailsHeader>
+                    <ErrorDetailsBlock>
                       {message.errorDetails}
-                    </div>
-                  </div>
+                    </ErrorDetailsBlock>
+                  </ErrorDetailsSection>
                 )}
                 {message.validationErrors && message.validationErrors.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-gray-300">
-                    <div className="text-xs font-semibold text-red-600 mb-1">
+                  <ValidationSection>
+                    <ValidationTitle>
                       Validation Errors ({message.validationErrors.length}):
-                    </div>
-                    <ul className="text-xs space-y-1">
+                    </ValidationTitle>
+                    <ValidationList>
                       {message.validationErrors.slice(0, 3).map((error, i) => (
-                        <li key={i} className="text-red-600">• {error}</li>
+                        <ValidationItem key={i}>&bull; {error}</ValidationItem>
                       ))}
                       {message.validationErrors.length > 3 && (
-                        <li className="text-red-600">
+                        <ValidationItem>
                           ... and {message.validationErrors.length - 3} more
-                        </li>
+                        </ValidationItem>
                       )}
-                    </ul>
-                  </div>
+                    </ValidationList>
+                  </ValidationSection>
                 )}
-                <div
-                  className={`
-                    text-xs mt-1 opacity-70
-                    ${message.role === 'user' ? 'text-right' : 'text-left'}
-                  `}
-                  title={formatTimestamp(message.timestamp)}
-                >
+                <Timestamp $role={message.role} title={formatTimestamp(message.timestamp)}>
                   {formatTimestamp(message.timestamp)}
-                </div>
-              </div>
-            </div>
+                </Timestamp>
+              </MessageBubble>
+            </MessageRow>
           ))
         )}
         {isGenerating && (
-          <div className="flex justify-start">
-            <div className="bg-gray-200 text-gray-900 rounded-lg px-4 py-2 flex items-center space-x-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Generating...</span>
-            </div>
-          </div>
+          <GeneratingRow>
+            <GeneratingBubble>
+              <SpinningLoader size={16} />
+              <GeneratingText>Generating...</GeneratingText>
+            </GeneratingBubble>
+          </GeneratingRow>
         )}
         <div ref={messagesEndRef} />
-      </div>
+      </MessagesList>
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 p-4">
-        <div className="flex items-end space-x-2">
-          <textarea
+      <InputArea>
+        <InputRow>
+          <StyledTextarea
             ref={textareaRef}
             value={currentPrompt}
             onChange={(e) => onPromptChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Describe the UI you want to create..."
             disabled={isGenerating}
-            className="
-              flex-1 px-3 py-2 border border-gray-300 rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-blue-500
-              resize-none min-h-[40px] max-h-[120px]
-              disabled:bg-gray-100 disabled:cursor-not-allowed
-            "
             rows={1}
           />
-          <button
+          <SendButton
             onClick={onSend}
             disabled={!currentPrompt.trim() || isGenerating}
-            className="
-              px-4 py-2 bg-blue-500 text-white rounded-lg
-              hover:bg-blue-600 transition-colors
-              disabled:bg-gray-300 disabled:cursor-not-allowed
-              flex items-center space-x-2
-            "
           >
             {isGenerating ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <SpinningLoader size={16} />
             ) : (
-              <Send className="w-4 h-4" />
+              <Send size={16} />
             )}
-          </button>
-        </div>
-        <div className="mt-1 text-xs text-gray-500">
+          </SendButton>
+        </InputRow>
+        <HintText>
           Press Enter to send, Shift+Enter for new line
-          {currentPrompt.length > 0 && ` • ${currentPrompt.length} characters`}
-        </div>
-      </div>
-    </div>
+          {currentPrompt.length > 0 && ` \u2022 ${currentPrompt.length} characters`}
+        </HintText>
+      </InputArea>
+    </Container>
   );
 }

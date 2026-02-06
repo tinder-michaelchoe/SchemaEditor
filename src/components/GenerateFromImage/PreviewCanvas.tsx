@@ -4,7 +4,68 @@
  */
 
 import React from 'react';
+import styled from 'styled-components';
 import { CanvasNode } from '@/plugins/canvas-view/components/CanvasNode';
+
+/* ------------------------------------------------------------------ */
+/*  Styled Components                                                  */
+/* ------------------------------------------------------------------ */
+
+const CanvasBackground = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #e8e4df;
+  padding: 16px;
+`;
+
+const EmptyMessage = styled.div`
+  color: ${p => p.theme.colors.textTertiary};
+  text-align: center;
+`;
+
+const EmptyTitle = styled.p`
+  font-size: ${p => p.theme.fontSizes.sm};
+`;
+
+const EmptySubtext = styled.p`
+  font-size: ${p => p.theme.fontSizes.xs};
+  margin-top: 4px;
+`;
+
+const ErrorMessage = styled.div`
+  color: #ef4444;
+  text-align: center;
+`;
+
+const ErrorTitle = styled.p`
+  font-size: ${p => p.theme.fontSizes.sm};
+`;
+
+const ErrorSubtext = styled.p`
+  font-size: ${p => p.theme.fontSizes.xs};
+  margin-top: 4px;
+`;
+
+const DeviceFrame = styled.div`
+  background: #ffffff;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  overflow: hidden;
+  flex-shrink: 0;
+  border-radius: 30px;
+  border: 8px solid #1a1a1a;
+`;
+
+const CanvasContent = styled.div`
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+`;
+
+/* ------------------------------------------------------------------ */
+/*  Props                                                              */
+/* ------------------------------------------------------------------ */
 
 interface PreviewCanvasProps {
   json: unknown;
@@ -12,7 +73,6 @@ interface PreviewCanvasProps {
 
 const DEVICE_WIDTH = 390;
 const DEVICE_HEIGHT = 844;
-const ASPECT_RATIO = DEVICE_WIDTH / DEVICE_HEIGHT; // ~0.462 (iPhone aspect ratio)
 
 export function PreviewCanvas({ json }: PreviewCanvasProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -46,44 +106,41 @@ export function PreviewCanvas({ json }: PreviewCanvasProps) {
 
   if (!json) {
     return (
-      <div className="preview-canvas flex items-center justify-center h-full bg-[#e8e4df]">
-        <div className="text-gray-400 text-center">
-          <p className="text-sm">No preview available</p>
-          <p className="text-xs mt-1">Generate JSON to see preview</p>
-        </div>
-      </div>
+      <CanvasBackground style={{ padding: 0 }}>
+        <EmptyMessage>
+          <EmptyTitle>No preview available</EmptyTitle>
+          <EmptySubtext>Generate JSON to see preview</EmptySubtext>
+        </EmptyMessage>
+      </CanvasBackground>
     );
   }
 
   if (!isValidStructure(json) || !json.root || !json.root.children) {
     return (
-      <div className="preview-canvas flex items-center justify-center h-full bg-[#e8e4df]">
-        <div className="text-red-600 text-center">
-          <p className="text-sm">Invalid JSON structure</p>
-          <p className="text-xs mt-1">JSON must have root.children array</p>
-        </div>
-      </div>
+      <CanvasBackground style={{ padding: 0 }}>
+        <ErrorMessage>
+          <ErrorTitle>Invalid JSON structure</ErrorTitle>
+          <ErrorSubtext>JSON must have root.children array</ErrorSubtext>
+        </ErrorMessage>
+      </CanvasBackground>
     );
   }
 
   const rootChildren = json.root.children as unknown[];
 
   return (
-    <div ref={containerRef} className="preview-canvas flex items-center justify-center h-full bg-[#e8e4df] p-4">
+    <CanvasBackground ref={containerRef}>
       {/* Device frame with fixed iPhone dimensions */}
-      <div
-        className="device-frame bg-white shadow-2xl overflow-hidden flex-shrink-0"
+      <DeviceFrame
         style={{
           width: DEVICE_WIDTH,
           height: DEVICE_HEIGHT,
           transform: `scale(${scale})`,
           transformOrigin: 'center center',
-          borderRadius: 30,
-          border: '8px solid #1a1a1a',
         }}
       >
         {/* Canvas content */}
-        <div className="canvas-content h-full w-full overflow-auto">
+        <CanvasContent>
           {rootChildren.map((child, index) => (
             <CanvasNode
               key={index}
@@ -99,8 +156,8 @@ export function PreviewCanvas({ json }: PreviewCanvasProps) {
               zoom={1}
             />
           ))}
-        </div>
-      </div>
-    </div>
+        </CanvasContent>
+      </DeviceFrame>
+    </CanvasBackground>
   );
 }

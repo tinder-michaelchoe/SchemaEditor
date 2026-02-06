@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { Upload, Download, FileJson, FolderOpen, Clock, Trash2, Settings, Sparkles } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
@@ -46,32 +47,32 @@ function loadRecents(key: string): RecentItem[] {
 
 function saveRecent(key: string, item: RecentItem): RecentItem[] {
   const recents = loadRecents(key);
-  
+
   // Remove existing item with same id
   const filtered = recents.filter(r => r.id !== item.id);
-  
+
   // Add new item at the beginning
   const updated = [item, ...filtered].slice(0, MAX_RECENTS);
-  
+
   try {
     localStorage.setItem(key, JSON.stringify(updated));
   } catch (e) {
     console.error('Failed to save recents:', e);
   }
-  
+
   return updated;
 }
 
 function removeRecent(key: string, id: string): RecentItem[] {
   const recents = loadRecents(key);
   const updated = recents.filter(r => r.id !== id);
-  
+
   try {
     localStorage.setItem(key, JSON.stringify(updated));
   } catch (e) {
     console.error('Failed to remove recent:', e);
   }
-  
+
   return updated;
 }
 
@@ -112,14 +113,182 @@ function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp);
   const now = new Date();
   const diff = now.getTime() - timestamp;
-  
+
   if (diff < 60000) return 'Just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
   if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
   if (diff < 604800000) return `${Math.floor(diff / 86400000)} days ago`;
-  
+
   return date.toLocaleDateString();
 }
+
+/* ── styled-components ── */
+
+const HiddenInput = styled.input`
+  display: none;
+`;
+
+const ToolbarRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const Stack = styled.div<{ $gap?: string }>`
+  display: flex;
+  flex-direction: column;
+  gap: ${p => p.$gap || '0.5rem'};
+`;
+
+const RecentHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const RemoveButton = styled.button`
+  padding: 0.25rem;
+  border-radius: ${p => p.theme.radii.sm};
+  border: none;
+  background: transparent;
+  color: ${p => p.theme.colors.textTertiary};
+  opacity: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgPrimary};
+    color: ${p => p.theme.colors.error};
+  }
+`;
+
+const RecentCard = styled.div<{ $compact?: boolean }>`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: ${p => (p.$compact ? '0.5rem' : '0.75rem')};
+  background: ${p => p.theme.colors.bgSecondary};
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: ${p => p.theme.radii.lg};
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+
+  &:hover ${RemoveButton} {
+    opacity: 1;
+  }
+`;
+
+const CardContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const CardName = styled.div`
+  font-weight: 500;
+  font-size: ${p => p.theme.fontSizes.sm};
+  color: ${p => p.theme.colors.textPrimary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const CardMeta = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textTertiary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const CardTimestamp = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textTertiary};
+  margin-top: 0.125rem;
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 2rem 0;
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const EmptyIcon = styled(FileJson)`
+  display: block;
+  margin: 0 auto 0.5rem;
+  opacity: 0.5;
+`;
+
+const EmptyTitle = styled.p`
+  font-size: ${p => p.theme.fontSizes.sm};
+  margin: 0;
+`;
+
+const EmptySubtitle = styled.p`
+  font-size: ${p => p.theme.fontSizes.xs};
+  margin: 0.25rem 0 0;
+`;
+
+const ScrollableList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 150px;
+  overflow-y: auto;
+`;
+
+const Divider = styled.div`
+  border-top: 1px solid ${p => p.theme.colors.border};
+  padding-top: 0.75rem;
+`;
+
+const HintText = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textSecondary};
+  margin-bottom: 0.5rem;
+`;
+
+const PasteDescription = styled.p`
+  font-size: ${p => p.theme.fontSizes.sm};
+  color: ${p => p.theme.colors.textSecondary};
+  margin: 0;
+`;
+
+const MonoTextArea = styled(TextArea)`
+  font-family: ${p => p.theme.fonts.mono};
+  font-size: ${p => p.theme.fontSizes.sm};
+`;
+
+const ErrorText = styled.p`
+  font-size: ${p => p.theme.fontSizes.sm};
+  color: ${p => p.theme.colors.error};
+  margin: 0;
+`;
+
+const FooterRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+`;
+
+const Spacer = styled.div`
+  flex: 1;
+`;
+
+const FullWidthButton = styled(Button)`
+  width: 100%;
+`;
+
+/* ── component ── */
 
 interface ImportExportProps {
   onImportSchema: (schema: unknown) => void;
@@ -128,19 +297,19 @@ interface ImportExportProps {
   hasSchema: boolean;
 }
 
-export function ImportExport({ 
-  onImportSchema, 
-  onImportJSON, 
+export function ImportExport({
+  onImportSchema,
+  onImportJSON,
   onExportJSON,
   hasSchema,
 }: ImportExportProps) {
   const schemaInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Schema modal state
   const [isLoadSchemaModalOpen, setIsLoadSchemaModalOpen] = useState(false);
   const [recentSchemas, setRecentSchemas] = useState<RecentItem[]>([]);
-  
+
   // JSON modal state
   const [isLoadJSONModalOpen, setIsLoadJSONModalOpen] = useState(false);
   const [recentJSON, setRecentJSON] = useState<RecentItem[]>([]);
@@ -167,12 +336,12 @@ export function ImportExport({
     reader.onload = (event) => {
       try {
         let text = event.target?.result as string;
-        
+
         // Remove BOM if present
         if (text.charCodeAt(0) === 0xFEFF) {
           text = text.slice(1);
         }
-        
+
         const schema = JSON.parse(text);
         loadSchema(schema, file.name);
       } catch (err) {
@@ -193,7 +362,7 @@ export function ImportExport({
       console.error('No schema data to load');
       return;
     }
-    
+
     // Save to recents
     const recentItem: RecentItem = {
       id: generateId(schema),
@@ -204,7 +373,7 @@ export function ImportExport({
     };
     const updated = saveRecent(RECENT_SCHEMAS_KEY, recentItem);
     setRecentSchemas(updated);
-    
+
     // Import and close modal
     onImportSchema(schema);
     setIsLoadSchemaModalOpen(false);
@@ -218,12 +387,12 @@ export function ImportExport({
     reader.onload = (event) => {
       try {
         let text = event.target?.result as string;
-        
+
         // Remove BOM if present
         if (text.charCodeAt(0) === 0xFEFF) {
           text = text.slice(1);
         }
-        
+
         const data = JSON.parse(text);
         loadJSON(data, file.name);
       } catch (err) {
@@ -244,7 +413,7 @@ export function ImportExport({
       console.error('No JSON data to load');
       return;
     }
-    
+
     // Save to recents
     const recentItem: RecentItem = {
       id: generateId(data),
@@ -255,7 +424,7 @@ export function ImportExport({
     };
     const updated = saveRecent(RECENT_JSON_KEY, recentItem);
     setRecentJSON(updated);
-    
+
     // Import and close modal
     onImportJSON(data);
     setIsLoadJSONModalOpen(false);
@@ -267,7 +436,7 @@ export function ImportExport({
     const jsonString = onExportJSON();
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = 'document.json';
@@ -282,7 +451,7 @@ export function ImportExport({
       setJsonError('Please enter some JSON');
       return;
     }
-    
+
     try {
       const data = JSON.parse(jsonText);
       loadJSON(data);
@@ -318,22 +487,20 @@ export function ImportExport({
   return (
     <>
       {/* Hidden file inputs */}
-      <input
+      <HiddenInput
         ref={schemaInputRef}
         type="file"
         accept=".json"
         onChange={handleSchemaFileChange}
-        className="hidden"
       />
-      <input
+      <HiddenInput
         ref={jsonInputRef}
         type="file"
         accept=".json"
         onChange={handleJSONFileChange}
-        className="hidden"
       />
 
-      <div className="flex items-center gap-2">
+      <ToolbarRow>
         {/* Settings Button */}
         <Button
           variant="ghost"
@@ -341,7 +508,7 @@ export function ImportExport({
           onClick={() => setIsSettingsModalOpen(true)}
           title="Settings"
         >
-          <Settings className="w-4 h-4" />
+          <Settings size={16} />
         </Button>
 
         {/* Load Schema Button */}
@@ -350,7 +517,7 @@ export function ImportExport({
           size="sm"
           onClick={openLoadSchemaModal}
         >
-          <FileJson className="w-4 h-4" />
+          <FileJson size={16} />
           Load Schema
         </Button>
 
@@ -361,7 +528,7 @@ export function ImportExport({
             size="sm"
             onClick={openLoadJSONModal}
           >
-            <Upload className="w-4 h-4" />
+            <Upload size={16} />
             Load JSON
           </Button>
         )}
@@ -373,7 +540,7 @@ export function ImportExport({
             size="sm"
             onClick={() => setIsGenerateFromImageModalOpen(true)}
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles size={16} />
             Generate from Image
           </Button>
         )}
@@ -385,11 +552,11 @@ export function ImportExport({
             size="sm"
             onClick={handleExport}
           >
-            <Download className="w-4 h-4" />
+            <Download size={16} />
             Export JSON
           </Button>
         )}
-      </div>
+      </ToolbarRow>
 
       {/* Load Schema Modal */}
       <Modal
@@ -397,27 +564,26 @@ export function ImportExport({
         onClose={() => setIsLoadSchemaModalOpen(false)}
         title="Load Schema"
         footer={
-          <Button
+          <FullWidthButton
             variant="secondary"
             size="sm"
             onClick={() => schemaInputRef.current?.click()}
-            className="w-full"
           >
-            <FolderOpen className="w-4 h-4" />
+            <FolderOpen size={16} />
             Load from file...
-          </Button>
+          </FullWidthButton>
         }
       >
-        <div className="space-y-3">
+        <Stack $gap="0.75rem">
           {recentSchemas.length > 0 ? (
             <>
-              <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                <Clock className="w-3 h-3" />
+              <RecentHeader>
+                <Clock size={12} />
                 Recent Schemas
-              </div>
-              <div className="space-y-1">
+              </RecentHeader>
+              <Stack $gap="0.25rem">
                 {recentSchemas.map((item) => (
-                  <div
+                  <RecentCard
                     key={item.id}
                     onClick={() => loadSchema(item.data, item.source)}
                     role="button"
@@ -428,47 +594,30 @@ export function ImportExport({
                         loadSchema(item.data, item.source);
                       }
                     }}
-                    className="
-                      w-full flex items-center justify-between gap-3 p-3
-                      bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)]
-                      border border-[var(--border-color)] rounded-lg
-                      text-left transition-colors group cursor-pointer
-                    "
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-[var(--text-primary)] truncate">
-                        {item.name}
-                      </div>
-                      <div className="text-xs text-[var(--text-tertiary)] truncate">
-                        {item.source}
-                      </div>
-                      <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
-                        {formatTimestamp(item.timestamp)}
-                      </div>
-                    </div>
-                    <button
+                    <CardContent>
+                      <CardName>{item.name}</CardName>
+                      <CardMeta>{item.source}</CardMeta>
+                      <CardTimestamp>{formatTimestamp(item.timestamp)}</CardTimestamp>
+                    </CardContent>
+                    <RemoveButton
                       onClick={(e) => handleRemoveRecentSchema(item.id, e)}
-                      className="
-                        p-1 rounded opacity-0 group-hover:opacity-100
-                        hover:bg-[var(--bg-primary)] text-[var(--text-tertiary)]
-                        hover:text-[var(--error-color)] transition-all
-                      "
                       title="Remove from recents"
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
+                      <Trash2 size={12} />
+                    </RemoveButton>
+                  </RecentCard>
                 ))}
-              </div>
+              </Stack>
             </>
           ) : (
-            <div className="text-center py-8 text-[var(--text-tertiary)]">
-              <FileJson className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No recent schemas</p>
-              <p className="text-xs mt-1">Load a schema file to get started</p>
-            </div>
+            <EmptyState>
+              <EmptyIcon size={32} />
+              <EmptyTitle>No recent schemas</EmptyTitle>
+              <EmptySubtitle>Load a schema file to get started</EmptySubtitle>
+            </EmptyState>
           )}
-        </div>
+        </Stack>
       </Modal>
 
       {/* Load JSON Modal */}
@@ -477,16 +626,16 @@ export function ImportExport({
         onClose={() => setIsLoadJSONModalOpen(false)}
         title="Load JSON"
         footer={
-          <div className="flex items-center gap-2 w-full">
+          <FooterRow>
             <Button
               variant="secondary"
               size="sm"
               onClick={() => jsonInputRef.current?.click()}
             >
-              <FolderOpen className="w-4 h-4" />
+              <FolderOpen size={16} />
               Load from file...
             </Button>
-            <div className="flex-1" />
+            <Spacer />
             <Button
               variant="primary"
               size="sm"
@@ -494,21 +643,22 @@ export function ImportExport({
             >
               Load JSON
             </Button>
-          </div>
+          </FooterRow>
         }
       >
-        <div className="space-y-4">
+        <Stack $gap="1rem">
           {/* Recent JSON */}
           {recentJSON.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                <Clock className="w-3 h-3" />
+            <Stack $gap="0.5rem">
+              <RecentHeader>
+                <Clock size={12} />
                 Recent Documents
-              </div>
-              <div className="space-y-1 max-h-[150px] overflow-y-auto">
+              </RecentHeader>
+              <ScrollableList>
                 {recentJSON.map((item) => (
-                  <div
+                  <RecentCard
                     key={item.id}
+                    $compact
                     onClick={() => loadJSON(item.data, item.source)}
                     role="button"
                     tabIndex={0}
@@ -518,54 +668,35 @@ export function ImportExport({
                         loadJSON(item.data, item.source);
                       }
                     }}
-                    className="
-                      w-full flex items-center justify-between gap-3 p-2
-                      bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)]
-                      border border-[var(--border-color)] rounded-lg
-                      text-left transition-colors group cursor-pointer
-                    "
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm text-[var(--text-primary)] truncate">
-                        {item.name}
-                      </div>
-                      <div className="text-xs text-[var(--text-tertiary)] truncate">
-                        {item.source}
-                      </div>
-                      <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
-                        {formatTimestamp(item.timestamp)}
-                      </div>
-                    </div>
-                    <button
+                    <CardContent>
+                      <CardName>{item.name}</CardName>
+                      <CardMeta>{item.source}</CardMeta>
+                      <CardTimestamp>{formatTimestamp(item.timestamp)}</CardTimestamp>
+                    </CardContent>
+                    <RemoveButton
                       onClick={(e) => handleRemoveRecentJSON(item.id, e)}
-                      className="
-                        p-1 rounded opacity-0 group-hover:opacity-100
-                        hover:bg-[var(--bg-primary)] text-[var(--text-tertiary)]
-                        hover:text-[var(--error-color)] transition-all
-                      "
                       title="Remove from recents"
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
+                      <Trash2 size={12} />
+                    </RemoveButton>
+                  </RecentCard>
                 ))}
-              </div>
-              <div className="border-t border-[var(--border-color)] pt-3">
-                <div className="text-xs text-[var(--text-secondary)] mb-2">
-                  Or paste JSON below:
-                </div>
-              </div>
-            </div>
+              </ScrollableList>
+              <Divider>
+                <HintText>Or paste JSON below:</HintText>
+              </Divider>
+            </Stack>
           )}
-          
+
           {/* Paste JSON */}
           {recentJSON.length === 0 && (
-            <p className="text-sm text-[var(--text-secondary)]">
+            <PasteDescription>
               Paste your JSON below, or load from a file.
-            </p>
+            </PasteDescription>
           )}
-          
-          <TextArea
+
+          <MonoTextArea
             value={jsonText}
             onChange={(e) => {
               setJsonText(e.target.value);
@@ -573,16 +704,13 @@ export function ImportExport({
             }}
             placeholder='{"id": "example", "root": { "children": [] }}'
             rows={recentJSON.length > 0 ? 6 : 10}
-            className="font-mono text-sm"
             error={!!jsonError}
           />
-          
+
           {jsonError && (
-            <p className="text-sm text-[var(--error-color)]">
-              {jsonError}
-            </p>
+            <ErrorText>{jsonError}</ErrorText>
           )}
-        </div>
+        </Stack>
       </Modal>
 
       {/* Settings Modal */}

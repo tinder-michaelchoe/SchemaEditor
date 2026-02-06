@@ -4,9 +4,141 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { Button } from '@/components/ui/Button';
 import { promptService } from '@/services/promptService';
 import { Save, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
+
+/* ── Styled Components ── */
+
+const LoadingWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 16rem;
+`;
+
+const LoadingText = styled.div`
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const EditorContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+`;
+
+const Header = styled.div`
+  margin-bottom: 1rem;
+`;
+
+const Title = styled.h3`
+  font-size: ${p => p.theme.fontSizes.lg};
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const Description = styled.p`
+  font-size: ${p => p.theme.fontSizes.sm};
+  color: ${p => p.theme.colors.textSecondary};
+  margin: 0;
+`;
+
+const Toolbar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+`;
+
+const ToolbarActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const StatusInfo = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const UnsavedLabel = styled.span`
+  color: ${p => p.theme.colors.warning};
+  font-weight: 500;
+  margin-right: 0.5rem;
+`;
+
+const StatusMessage = styled.div<{ $variant: 'error' | 'success' }>`
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-radius: ${p => p.theme.radii.md};
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: ${p => p.theme.fontSizes.sm};
+
+  background: ${p => p.$variant === 'error' ? `${p.theme.colors.error}1a` : `${p.theme.colors.success}1a`};
+  border: 1px solid ${p => p.$variant === 'error' ? `${p.theme.colors.error}40` : `${p.theme.colors.success}40`};
+  color: ${p => p.$variant === 'error' ? p.theme.colors.error : p.theme.colors.success};
+`;
+
+const EditorBorder = styled.div`
+  flex: 1;
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: ${p => p.theme.radii.lg};
+  overflow: hidden;
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  font-family: ${p => p.theme.fonts.mono};
+  font-size: ${p => p.theme.fontSizes.sm};
+  resize: none;
+  border: none;
+  outline: none;
+  background: ${p => p.theme.colors.bgPrimary};
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const Stats = styled.div`
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const HelpBox = styled.div`
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: ${p => p.theme.colors.accent}0d;
+  border: 1px solid ${p => p.theme.colors.accent}33;
+  border-radius: ${p => p.theme.radii.md};
+  font-size: ${p => p.theme.fontSizes.sm};
+`;
+
+const HelpTitle = styled.div`
+  font-weight: 500;
+  color: ${p => p.theme.colors.accent};
+  margin-bottom: 0.25rem;
+`;
+
+const HelpList = styled.ul`
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+/* ── Component ── */
 
 export function SystemPromptEditor() {
   const [content, setContent] = useState('');
@@ -78,32 +210,32 @@ export function SystemPromptEditor() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading system prompt...</div>
-      </div>
+      <LoadingWrapper>
+        <LoadingText>Loading system prompt...</LoadingText>
+      </LoadingWrapper>
     );
   }
 
   return (
-    <div className="system-prompt-editor flex flex-col h-full">
+    <EditorContainer>
       {/* Header */}
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold mb-2">System Prompt</h3>
-        <p className="text-sm text-gray-600">
+      <Header>
+        <Title>System Prompt</Title>
+        <Description>
           Edit the system prompt that guides the AI in generating CLADS JSON from images.
-        </p>
-      </div>
+        </Description>
+      </Header>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+      <Toolbar>
+        <ToolbarActions>
           <Button
             variant="primary"
             size="sm"
             onClick={handleSave}
             disabled={!hasUnsavedChanges || isSaving}
           >
-            <Save className="w-4 h-4 mr-1" />
+            <Save size={16} />
             {isSaving ? 'Saving...' : 'Save'}
           </Button>
           <Button
@@ -112,66 +244,65 @@ export function SystemPromptEditor() {
             onClick={handleReset}
             disabled={isSaving}
           >
-            <RotateCcw className="w-4 h-4 mr-1" />
+            <RotateCcw size={16} />
             Reset to Default
           </Button>
-        </div>
+        </ToolbarActions>
 
-        <div className="text-xs text-gray-500">
-          {hasUnsavedChanges && <span className="text-orange-600 font-medium mr-2">Unsaved changes</span>}
+        <StatusInfo>
+          {hasUnsavedChanges && <UnsavedLabel>Unsaved changes</UnsavedLabel>}
           {lastSaved && (
             <span>
               Last saved: {lastSaved.toLocaleTimeString()}
             </span>
           )}
-        </div>
-      </div>
+        </StatusInfo>
+      </Toolbar>
 
       {/* Status Messages */}
       {error && (
-        <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded flex items-center gap-2 text-sm text-red-700">
-          <AlertCircle className="w-4 h-4" />
+        <StatusMessage $variant="error">
+          <AlertCircle size={16} />
           {error}
-        </div>
+        </StatusMessage>
       )}
       {showSuccess && (
-        <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded flex items-center gap-2 text-sm text-green-700">
-          <CheckCircle className="w-4 h-4" />
+        <StatusMessage $variant="success">
+          <CheckCircle size={16} />
           System prompt saved successfully
-        </div>
+        </StatusMessage>
       )}
 
       {/* Editor */}
-      <div className="flex-1 border border-gray-300 rounded-lg overflow-hidden">
-        <textarea
+      <EditorBorder>
+        <TextArea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full h-full p-4 font-mono text-sm resize-none focus:outline-none"
           placeholder="Enter system prompt..."
           spellCheck={false}
         />
-      </div>
+      </EditorBorder>
 
       {/* Stats */}
-      <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+      <Stats>
         <div>
-          {wordCount} words • {charCount} characters
+          {wordCount} words &bull; {charCount} characters
         </div>
         <div>
           Markdown supported
         </div>
-      </div>
+      </Stats>
 
       {/* Help Text */}
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-        <div className="font-medium text-blue-900 mb-1">Tips:</div>
-        <ul className="text-blue-800 space-y-1 text-xs">
-          <li>• Be specific about the CLADS format and required fields</li>
-          <li>• Include examples of common UI patterns</li>
-          <li>• Specify styling guidelines and constraints</li>
-          <li>• The prompt is stored locally in your browser</li>
-        </ul>
-      </div>
-    </div>
+      <HelpBox>
+        <HelpTitle>Tips:</HelpTitle>
+        <HelpList>
+          <li>&#8226; Be specific about the CLADS format and required fields</li>
+          <li>&#8226; Include examples of common UI patterns</li>
+          <li>&#8226; Specify styling guidelines and constraints</li>
+          <li>&#8226; The prompt is stored locally in your browser</li>
+        </HelpList>
+      </HelpBox>
+    </EditorContainer>
   );
 }

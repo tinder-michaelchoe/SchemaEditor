@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertCircle, Copy, Check, ChevronDown, ChevronUp, Maximize2 } from 'lucide-react';
 import { initClads, renderCladsDocument, isCladsInitialized } from '@clads-preview/index.js';
+import styled, { css } from 'styled-components';
+import { spin } from '@/styles/mixins';
 
 interface DevicePreviewProps {
   data: unknown;
@@ -18,7 +20,262 @@ const DETENT_CONFIG: Record<DetentSize, { label: string; topPercent: number }> =
   medium: { label: 'Medium Detent', topPercent: 50 },
 };
 
-export function DevicePreview({ data, className = '' }: DevicePreviewProps) {
+/* ── styled-components ── */
+
+const LoadingWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+`;
+
+const LoadingContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const Spinner = styled.div`
+  width: 32px;
+  height: 32px;
+  border: 2px solid ${p => p.theme.colors.accent};
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: ${spin} 1s linear infinite;
+`;
+
+const LoadingText = styled.span`
+  font-size: ${p => p.theme.fontSizes.sm};
+`;
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+`;
+
+const ErrorDrawer = styled.div`
+  flex-shrink: 0;
+  border-bottom: 1px solid ${p => p.theme.colors.error}4d;
+  background: ${p => p.theme.colors.error}1a;
+`;
+
+const ErrorHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: ${p => p.theme.colors.error}0d;
+  }
+`;
+
+const ErrorTitle = styled.span`
+  flex: 1;
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-weight: 500;
+  color: ${p => p.theme.colors.error};
+`;
+
+const CopyErrorButton = styled.button`
+  padding: 4px;
+  border-radius: ${p => p.theme.radii.sm};
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+`;
+
+const ErrorContent = styled.div`
+  padding: 0 12px 12px;
+`;
+
+const ErrorPre = styled.pre`
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textSecondary};
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 5lh;
+  overflow: hidden;
+  margin: 0;
+`;
+
+const PhoneContainer = styled.div`
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: hidden;
+`;
+
+const FitButton = styled.button<{ $active: boolean }>`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: ${p => p.theme.radii.md};
+  font-size: ${p => p.theme.fontSizes.xs};
+  font-weight: 500;
+  transition: background-color 0.15s, color 0.15s;
+  box-shadow: ${p => p.theme.shadows.sm};
+  cursor: pointer;
+
+  ${p =>
+    p.$active
+      ? css`
+          background: ${p.theme.colors.accent};
+          color: #ffffff;
+          border: none;
+        `
+      : css`
+          background: ${p.theme.colors.bgPrimary};
+          color: ${p.theme.colors.textSecondary};
+          border: 1px solid ${p.theme.colors.border};
+
+          &:hover {
+            color: ${p.theme.colors.textPrimary};
+            background: ${p.theme.colors.bgTertiary};
+          }
+        `}
+`;
+
+const PhoneSizer = styled.div<{ $fit: boolean }>`
+  position: relative;
+  width: 100%;
+  ${p =>
+    p.$fit
+      ? css`
+          height: 100%;
+          max-width: 100%;
+        `
+      : css`
+          max-width: 280px;
+        `}
+`;
+
+const FitModeInner = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const FitModeFrame = styled.div`
+  position: relative;
+  aspect-ratio: 9 / 19.5;
+  height: 100%;
+  max-width: 100%;
+`;
+
+const BezelImage = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 10;
+`;
+
+const ScreenArea = styled.div`
+  position: absolute;
+  overflow: hidden;
+  background: black;
+  left: 7%;
+  right: 7%;
+  top: calc(1.5% + 36px);
+  bottom: calc(1.5% + 36px);
+  border-radius: 24px;
+`;
+
+const BottomSheet = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  transition: all 0.3s;
+  overflow: hidden;
+`;
+
+const DragHandle = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+`;
+
+const DragHandleBar = styled.div`
+  width: 36px;
+  height: 4px;
+  background: ${p => p.theme.colors.bgTertiary};
+  border-radius: ${p => p.theme.radii.full};
+`;
+
+const PreviewIframe = styled.iframe`
+  width: 100%;
+  border: 0;
+  background: white;
+`;
+
+const NoPreviewMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: ${p => p.theme.colors.textTertiary};
+  font-size: ${p => p.theme.fontSizes.sm};
+`;
+
+const ControlSelect = styled.select<{ $position: 'left' | 'right' }>`
+  position: absolute;
+  bottom: 8px;
+  ${p => (p.$position === 'left' ? 'left: 8px;' : 'right: 8px;')}
+  z-index: 20;
+  padding: 6px 8px;
+  border-radius: ${p => p.theme.radii.md};
+  font-size: ${p => p.theme.fontSizes.xs};
+  font-weight: 500;
+  background: ${p => p.theme.colors.bgPrimary};
+  color: ${p => p.theme.colors.textSecondary};
+  border: 1px solid ${p => p.theme.colors.border};
+  transition: background-color 0.15s, color 0.15s;
+  box-shadow: ${p => p.theme.shadows.sm};
+  cursor: pointer;
+
+  &:hover {
+    color: ${p => p.theme.colors.textPrimary};
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px ${p => p.theme.colors.accent};
+  }
+`;
+
+const DisabledOption = styled.option`
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+/* ── component ── */
+
+export function DevicePreview({ data, className }: DevicePreviewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(isCladsInitialized());
   const [html, setHtml] = useState<string>('');
@@ -124,247 +381,162 @@ export function DevicePreview({ data, className = '' }: DevicePreviewProps) {
   // Loading state
   if (isLoading) {
     return (
-      <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="flex flex-col items-center gap-3 text-[var(--text-secondary)]">
-          <div className="w-8 h-8 border-2 border-[var(--accent-color)] border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm">Loading CLADS renderer...</span>
-        </div>
-      </div>
+      <LoadingWrapper className={className}>
+        <LoadingContent>
+          <Spinner />
+          <LoadingText>Loading CLADS renderer...</LoadingText>
+        </LoadingContent>
+      </LoadingWrapper>
     );
   }
 
   // Display HTML (either current or last successful)
   const displayHtml = html || lastSuccessfulHtml;
 
+  const renderScreenContent = () => (
+    <>
+      {/* Bottom sheet simulation */}
+      <BottomSheet
+        style={{
+          top: `${DETENT_CONFIG[detentSize].topPercent}%`,
+          borderTopLeftRadius: detentSize !== 'full' ? '20px' : '0',
+          borderTopRightRadius: detentSize !== 'full' ? '20px' : '0',
+        }}
+      >
+        {/* Drag handle for non-full detents */}
+        {detentSize !== 'full' && (
+          <DragHandle>
+            <DragHandleBar />
+          </DragHandle>
+        )}
+        {displayHtml ? (
+          <PreviewIframe
+            srcDoc={displayHtml}
+            style={{ height: detentSize !== 'full' ? 'calc(100% - 20px)' : '100%' }}
+            title="CLADS Preview"
+            sandbox="allow-same-origin allow-scripts"
+          />
+        ) : (
+          <NoPreviewMessage>
+            No preview available
+          </NoPreviewMessage>
+        )}
+      </BottomSheet>
+    </>
+  );
+
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <Container className={className}>
       {/* Error drawer */}
       {error && (
-        <div className="flex-shrink-0 border-b border-[var(--error-color)]/30 bg-[var(--error-color)]/10">
+        <ErrorDrawer>
           {/* Error header - always visible */}
-          <div 
-            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[var(--error-color)]/5"
-            onClick={() => setIsErrorExpanded(!isErrorExpanded)}
-          >
-            <AlertCircle className="w-4 h-4 text-[var(--error-color)] flex-shrink-0" />
-            <span className="flex-1 text-sm font-medium text-[var(--error-color)]">Render failed</span>
-            <button
+          <ErrorHeader onClick={() => setIsErrorExpanded(!isErrorExpanded)}>
+            <AlertCircle size={16} style={{ color: 'inherit', flexShrink: 0 }} />
+            <ErrorTitle>Render failed</ErrorTitle>
+            <CopyErrorButton
               onClick={(e) => {
                 e.stopPropagation();
                 handleCopyError();
               }}
-              className="p-1 rounded hover:bg-[var(--bg-tertiary)] transition-colors"
               title="Copy error to clipboard"
             >
               {copiedError ? (
-                <Check className="w-3.5 h-3.5 text-[var(--success-color)]" />
+                <Check size={14} style={{ color: 'var(--success-color)' }} />
               ) : (
-                <Copy className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
+                <Copy size={14} />
               )}
-            </button>
+            </CopyErrorButton>
             {isErrorExpanded ? (
-              <ChevronUp className="w-4 h-4 text-[var(--text-secondary)]" />
+              <ChevronUp size={16} />
             ) : (
-              <ChevronDown className="w-4 h-4 text-[var(--text-secondary)]" />
+              <ChevronDown size={16} />
             )}
-          </div>
-          
+          </ErrorHeader>
+
           {/* Error content - collapsible */}
           {isErrorExpanded && (
-            <div className="px-3 pb-3">
-              <pre className="text-xs text-[var(--text-secondary)] whitespace-pre-wrap break-words max-h-[5lh] overflow-hidden">
+            <ErrorContent>
+              <ErrorPre>
                 {getTruncatedError(error.message)}
-              </pre>
-            </div>
+              </ErrorPre>
+            </ErrorContent>
           )}
-        </div>
+        </ErrorDrawer>
       )}
 
       {/* Phone bezel container */}
-      <div className="relative flex-1 flex items-center justify-center p-4 overflow-hidden">
+      <PhoneContainer>
         {/* Fit button - upper right corner */}
-        <button
+        <FitButton
+          $active={fitToContainer}
           onClick={() => setFitToContainer(!fitToContainer)}
-          className={`
-            absolute top-2 right-2 z-20
-            flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium
-            transition-colors shadow-sm
-            ${fitToContainer
-              ? 'bg-[var(--accent-color)] text-white'
-              : 'bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] border border-[var(--border-color)]'
-            }
-          `}
           title={fitToContainer ? 'Use fixed size' : 'Fit to panel'}
         >
-          <Maximize2 className="w-3 h-3" />
+          <Maximize2 size={12} />
           Fit
-        </button>
+        </FitButton>
 
-        <div 
-          className={`relative ${fitToContainer ? 'w-full h-full max-w-full' : 'w-full max-w-[280px]'}`}
+        <PhoneSizer
+          $fit={fitToContainer}
           style={{ aspectRatio: fitToContainer ? undefined : '9 / 19.5' }}
         >
           {fitToContainer ? (
             // Fit mode: scale to fill container while maintaining aspect ratio
-            <div className="relative w-full h-full flex items-center justify-center">
-              <div 
-                className="relative"
-                style={{ 
-                  aspectRatio: '9 / 19.5',
-                  height: '100%',
-                  maxWidth: '100%',
-                }}
-              >
+            <FitModeInner>
+              <FitModeFrame>
                 {/* Phone bezel image */}
-                <img
+                <BezelImage
                   src="/phone-bezel.png"
                   alt="Phone frame"
-                  className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10"
                 />
-                
+
+                {/* Screen content area - iframe isolates styles */}
+                <ScreenArea>
+                  {renderScreenContent()}
+                </ScreenArea>
+              </FitModeFrame>
+            </FitModeInner>
+          ) : (
+            // Fixed size mode
+            <>
+              {/* Phone bezel image */}
+              <BezelImage
+                src="/phone-bezel.png"
+                alt="Phone frame"
+              />
+
               {/* Screen content area - iframe isolates styles */}
-              <div
-                className="absolute overflow-hidden bg-black"
-                style={{
-                  left: '7%',
-                  right: '7%',
-                  top: 'calc(1.5% + 36px)',
-                  bottom: 'calc(1.5% + 36px)',
-                  borderTopLeftRadius: '24px',
-                  borderTopRightRadius: '24px',
-                  borderBottomLeftRadius: '24px',
-                  borderBottomRightRadius: '24px',
-                }}
-              >
-                {/* Bottom sheet simulation */}
-                <div 
-                  className="absolute left-0 right-0 bottom-0 bg-white transition-all duration-300 overflow-hidden"
-                  style={{
-                    top: `${DETENT_CONFIG[detentSize].topPercent}%`,
-                    borderTopLeftRadius: detentSize !== 'full' ? '20px' : '0',
-                    borderTopRightRadius: detentSize !== 'full' ? '20px' : '0',
-                  }}
-                >
-                  {/* Drag handle for non-full detents */}
-                  {detentSize !== 'full' && (
-                    <div className="flex justify-center py-2">
-                      <div className="w-9 h-1 bg-gray-300 rounded-full" />
-                    </div>
-                  )}
-                {displayHtml ? (
-                    <iframe
-                      srcDoc={displayHtml}
-                      className="w-full border-0 bg-white"
-                      style={{ height: detentSize !== 'full' ? 'calc(100% - 20px)' : '100%' }}
-                      title="CLADS Preview"
-                      sandbox="allow-same-origin allow-scripts"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                      No preview available
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          // Fixed size mode
-          <>
-            {/* Phone bezel image */}
-            <img
-              src="/phone-bezel.png"
-              alt="Phone frame"
-              className="absolute inset-0 w-full h-full object-contain pointer-events-none z-10"
-            />
-            
-            {/* Screen content area - iframe isolates styles */}
-            <div
-              className="absolute overflow-hidden bg-black"
-              style={{
-                left: '7%',
-                right: '7%',
-                top: 'calc(1.5% + 36px)',
-                bottom: 'calc(1.5% + 36px)',
-                borderTopLeftRadius: '24px',
-                borderTopRightRadius: '24px',
-                borderBottomLeftRadius: '24px',
-                borderBottomRightRadius: '24px',
-              }}
-            >
-              {/* Bottom sheet simulation */}
-              <div 
-                className="absolute left-0 right-0 bottom-0 bg-white transition-all duration-300 overflow-hidden"
-                style={{
-                  top: `${DETENT_CONFIG[detentSize].topPercent}%`,
-                  borderTopLeftRadius: detentSize !== 'full' ? '20px' : '0',
-                  borderTopRightRadius: detentSize !== 'full' ? '20px' : '0',
-                }}
-              >
-                {/* Drag handle for non-full detents */}
-                {detentSize !== 'full' && (
-                  <div className="flex justify-center py-2">
-                    <div className="w-9 h-1 bg-gray-300 rounded-full" />
-                  </div>
-                )}
-                {displayHtml ? (
-                  <iframe
-                    srcDoc={displayHtml}
-                    className="w-full border-0 bg-white"
-                    style={{ height: detentSize !== 'full' ? 'calc(100% - 20px)' : '100%' }}
-                    title="CLADS Preview"
-                    sandbox="allow-same-origin allow-scripts"
-                  />
-                  ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                    No preview available
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-        </div>
+              <ScreenArea>
+                {renderScreenContent()}
+              </ScreenArea>
+            </>
+          )}
+        </PhoneSizer>
 
         {/* Detent selector - lower left corner */}
-        <select
+        <ControlSelect
+          $position="left"
           value={detentSize}
           onChange={(e) => setDetentSize(e.target.value as DetentSize)}
-          className="
-            absolute bottom-2 left-2 z-20
-            px-2 py-1.5 rounded-md text-xs font-medium
-            bg-[var(--bg-primary)] text-[var(--text-secondary)]
-            border border-[var(--border-color)]
-            hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]
-            transition-colors shadow-sm cursor-pointer
-            focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]
-          "
         >
           <option value="full">Full Screen</option>
           <option value="large">Large Detent</option>
           <option value="medium">Medium Detent</option>
-        </select>
+        </ControlSelect>
 
         {/* Platform selector - lower right corner */}
-        <select
+        <ControlSelect
+          $position="right"
           value={platform}
           onChange={(e) => setPlatform(e.target.value as 'ios' | 'android')}
-          className="
-            absolute bottom-2 right-2 z-20
-            px-2 py-1.5 rounded-md text-xs font-medium
-            bg-[var(--bg-primary)] text-[var(--text-secondary)]
-            border border-[var(--border-color)]
-            hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]
-            transition-colors shadow-sm cursor-pointer
-            focus:outline-none focus:ring-1 focus:ring-[var(--accent-color)]
-          "
         >
           <option value="ios">iOS</option>
-          <option value="android" disabled className="text-[var(--text-tertiary)]">
+          <DisabledOption value="android" disabled>
             Android
-          </option>
-        </select>
-      </div>
-    </div>
+          </DisabledOption>
+        </ControlSelect>
+      </PhoneContainer>
+    </Container>
   );
 }

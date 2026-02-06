@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import styled, { css } from 'styled-components';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { ImageDropZone } from './ImageDropZone';
@@ -15,6 +16,195 @@ import { imageUtils } from '@/services/imageUtils';
 import { useEditorStore } from '@/store/editorStore';
 import type { ChatMessage } from '@/types/litellm';
 import { Copy, CheckCircle } from 'lucide-react';
+
+/* ------------------------------------------------------------------ */
+/*  Styled Components                                                  */
+/* ------------------------------------------------------------------ */
+
+const ModalContent = styled.div`
+  display: flex;
+  height: calc(90vh - 120px);
+  gap: 16px;
+`;
+
+const LeftPanel = styled.div`
+  width: 30%;
+`;
+
+const MiddlePanel = styled.div`
+  width: 35%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const ModelSelectorWrapper = styled.div`
+  flex-shrink: 0;
+`;
+
+const ChatWrapper = styled.div`
+  flex: 1;
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+const RightPanel = styled.div`
+  width: 35%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const TabHeader = styled.div`
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid ${p => p.theme.colors.border};
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  flex: 1;
+  padding: 8px 16px;
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-weight: 500;
+  transition: color 0.15s;
+  border: none;
+  background: none;
+  cursor: pointer;
+
+  ${p =>
+    p.$active
+      ? css`
+          border-bottom: 2px solid #3b82f6;
+          color: #2563eb;
+        `
+      : css`
+          color: ${p.theme.colors.textSecondary};
+          &:hover {
+            color: ${p.theme.colors.textPrimary};
+          }
+        `}
+`;
+
+const TabContent = styled.div`
+  flex: 1;
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+`;
+
+const CopyButtonWrapper = styled.div`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+`;
+
+const CopyButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: ${p => p.theme.colors.bgSecondary};
+  border-radius: 4px;
+  font-size: ${p => p.theme.fontSizes.xs};
+  transition: background-color 0.15s;
+  border: none;
+  cursor: pointer;
+  box-shadow: ${p => p.theme.shadows.sm};
+
+  &:hover {
+    background: ${p => p.theme.colors.bgTertiary};
+  }
+`;
+
+const JsonPre = styled.pre`
+  padding: 16px;
+  font-size: ${p => p.theme.fontSizes.xs};
+  font-family: ${p => p.theme.fonts.mono};
+  height: 100%;
+  overflow: auto;
+  margin: 0;
+  color: ${p => p.theme.colors.textPrimary};
+`;
+
+const EmptyJsonMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: ${p => p.theme.colors.textTertiary};
+  font-size: ${p => p.theme.fontSizes.sm};
+`;
+
+const ValidationBox = styled.div`
+  flex-shrink: 0;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid ${p => p.theme.colors.border};
+`;
+
+const ValidMessage = styled.div`
+  color: ${p => p.theme.colors.success};
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-weight: 500;
+`;
+
+const ErrorContainer = styled.div`
+  color: #ef4444;
+`;
+
+const ErrorHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+`;
+
+const ErrorTitle = styled.div`
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-weight: 500;
+`;
+
+const CopyErrorsButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #fee2e2;
+  border-radius: 4px;
+  font-size: ${p => p.theme.fontSizes.xs};
+  transition: background-color 0.15s;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    background: #fecaca;
+  }
+`;
+
+const ErrorList = styled.div`
+  font-size: ${p => p.theme.fontSizes.xs};
+  max-height: 128px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: ${p => p.theme.fonts.mono};
+`;
+
+const ErrorItem = styled.div`
+  white-space: pre-wrap;
+`;
+
+const FullWidthButton = styled(Button)`
+  width: 100%;
+`;
+
+/* ------------------------------------------------------------------ */
+/*  Props                                                              */
+/* ------------------------------------------------------------------ */
 
 interface GenerateFromImageModalProps {
   isOpen: boolean;
@@ -299,30 +489,30 @@ Please analyze these errors and generate a corrected version of the JSON that pa
       title="Generate from Image"
       size="fullscreen"
     >
-      <div className="flex h-[calc(90vh-120px)] gap-4">
+      <ModalContent>
         {/* Left Panel - Full Height Image Drop Zone */}
-        <div className="w-[30%]">
+        <LeftPanel>
           <ImageDropZone
             imageFile={imageFile}
             onImageSelect={handleImageSelect}
             onImageRemove={handleImageRemove}
             disabled={isGenerating}
           />
-        </div>
+        </LeftPanel>
 
         {/* Middle Panel - Model Selector + Chat */}
-        <div className="w-[35%] flex flex-col gap-3">
+        <MiddlePanel>
           {/* Model Selector */}
-          <div className="flex-shrink-0">
+          <ModelSelectorWrapper>
             <ModelSelector
               selectedModel={selectedModel}
               onModelChange={setSelectedModel}
               disabled={isGenerating}
             />
-          </div>
+          </ModelSelectorWrapper>
 
           {/* Chat Interface */}
-          <div className="flex-1 border border-gray-300 rounded-lg overflow-hidden">
+          <ChatWrapper>
             <ChatInterface
               messages={messages}
               currentPrompt={currentPrompt}
@@ -330,131 +520,118 @@ Please analyze these errors and generate a corrected version of the JSON that pa
               onSend={handleSend}
               isGenerating={isGenerating}
             />
-          </div>
-        </div>
+          </ChatWrapper>
+        </MiddlePanel>
 
         {/* Right Panel - Tabbed Preview/JSON View */}
-        <div className="w-[35%] flex flex-col gap-2">
+        <RightPanel>
           {/* Tab Header */}
-          <div className="flex items-center border-b border-gray-300">
-            <button
+          <TabHeader>
+            <TabButton
               onClick={() => setActiveTab('preview')}
-              className={`
-                flex-1 px-4 py-2 text-sm font-medium transition-colors
-                ${activeTab === 'preview'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'}
-              `}
+              $active={activeTab === 'preview'}
             >
               Preview
-            </button>
-            <button
+            </TabButton>
+            <TabButton
               onClick={() => setActiveTab('json')}
-              className={`
-                flex-1 px-4 py-2 text-sm font-medium transition-colors
-                ${activeTab === 'json'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'}
-              `}
+              $active={activeTab === 'json'}
             >
               JSON
-            </button>
-          </div>
+            </TabButton>
+          </TabHeader>
 
           {/* Tab Content */}
-          <div className="flex-1 border border-gray-300 rounded-lg overflow-hidden relative">
+          <TabContent>
             {activeTab === 'preview' ? (
               <PreviewCanvas json={currentJSON} />
             ) : (
               currentJSON ? (
                 <>
                   {/* Copy button in upper right of JSON view */}
-                  <div className="absolute top-2 right-2 z-10">
-                    <button
+                  <CopyButtonWrapper>
+                    <CopyButton
                       onClick={handleCopyJSON}
-                      className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs transition-colors shadow-sm"
                       title="Copy JSON"
                     >
                       {copied ? (
                         <>
-                          <CheckCircle className="w-3 h-3" />
+                          <CheckCircle size={12} />
                           <span>Copied!</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3 h-3" />
+                          <Copy size={12} />
                           <span>Copy</span>
                         </>
                       )}
-                    </button>
-                  </div>
-                  <pre className="p-4 text-xs font-mono h-full overflow-auto">
+                    </CopyButton>
+                  </CopyButtonWrapper>
+                  <JsonPre>
                     {JSON.stringify(currentJSON, null, 2)}
-                  </pre>
+                  </JsonPre>
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                <EmptyJsonMessage>
                   No JSON generated yet
-                </div>
+                </EmptyJsonMessage>
               )
             )}
-          </div>
+          </TabContent>
 
           {/* Validation Status */}
           {currentJSON && (
-            <div className="flex-shrink-0 p-3 rounded-lg border">
+            <ValidationBox>
               {validationErrors.length === 0 ? (
-                <div className="text-green-600 text-sm font-medium">
-                  ✓ Valid JSON
-                </div>
+                <ValidMessage>
+                  &#10003; Valid JSON
+                </ValidMessage>
               ) : (
-                <div className="text-red-600">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm font-medium">
-                      ✗ Validation Errors ({validationErrors.length})
-                    </div>
-                    <button
+                <ErrorContainer>
+                  <ErrorHeader>
+                    <ErrorTitle>
+                      &#10007; Validation Errors ({validationErrors.length})
+                    </ErrorTitle>
+                    <CopyErrorsButton
                       onClick={handleCopyErrors}
-                      className="flex items-center gap-1 px-2 py-1 bg-red-100 hover:bg-red-200 rounded text-xs transition-colors"
                       title="Copy all errors with JSON"
                     >
                       {errorsCopied ? (
                         <>
-                          <CheckCircle className="w-3 h-3" />
+                          <CheckCircle size={12} />
                           <span>Copied!</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="w-3 h-3" />
+                          <Copy size={12} />
                           <span>Copy All</span>
                         </>
                       )}
-                    </button>
-                  </div>
-                  <div className="text-xs max-h-32 overflow-auto space-y-1 font-mono">
+                    </CopyErrorsButton>
+                  </ErrorHeader>
+                  <ErrorList>
                     {validationErrors.slice(0, 5).map((error, i) => (
-                      <div key={i} className="whitespace-pre-wrap">• {error}</div>
+                      <ErrorItem key={i}>&bull; {error}</ErrorItem>
                     ))}
                     {validationErrors.length > 5 && (
-                      <div>... and {validationErrors.length - 5} more</div>
+                      <ErrorItem>... and {validationErrors.length - 5} more</ErrorItem>
                     )}
-                  </div>
-                </div>
+                  </ErrorList>
+                </ErrorContainer>
               )}
-            </div>
+            </ValidationBox>
           )}
 
           {/* Load Button */}
-          <Button
+          <FullWidthButton
             variant="primary"
             onClick={handleLoadIntoEditor}
             disabled={!currentJSON || validationErrors.length > 0}
-            className="w-full"
           >
             Load into Editor
-          </Button>
-        </div>
-      </div>
+          </FullWidthButton>
+        </RightPanel>
+      </ModalContent>
     </Modal>
   );
 }

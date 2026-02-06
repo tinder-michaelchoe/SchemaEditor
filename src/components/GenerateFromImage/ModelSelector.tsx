@@ -4,7 +4,48 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import styled from 'styled-components';
 import { litellmService, STANDARD_MODELS, type ModelInfo } from '../../services/litellm';
+
+/* ------------------------------------------------------------------ */
+/*  Styled Components                                                  */
+/* ------------------------------------------------------------------ */
+
+const Container = styled.div``;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-weight: 500;
+  color: ${p => p.theme.colors.textSecondary};
+  margin-bottom: 4px;
+`;
+
+const Select = styled.select<{ $isDisabled: boolean }>`
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid ${p => p.theme.colors.border};
+  border-radius: 8px;
+  background: ${p => (p.$isDisabled ? p.theme.colors.bgSecondary : p.theme.colors.bgPrimary)};
+  color: ${p => p.theme.colors.textPrimary};
+  cursor: ${p => (p.$isDisabled ? 'not-allowed' : 'pointer')};
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px ${p => p.theme.colors.accent};
+  }
+`;
+
+const LoadingHint = styled.div`
+  margin-top: 4px;
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+/* ------------------------------------------------------------------ */
+/*  Props                                                              */
+/* ------------------------------------------------------------------ */
 
 interface ModelSelectorProps {
   selectedModel: string;
@@ -42,19 +83,15 @@ export function ModelSelector({
   const dynamicModels = models.filter(m => m.category === 'dynamic');
 
   return (
-    <div className="model-selector">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+    <Container>
+      <Label>
         Model
-      </label>
-      <select
+      </Label>
+      <Select
         value={selectedModel}
         onChange={(e) => onModelChange(e.target.value)}
         disabled={disabled || isLoading}
-        className={`
-          w-full px-3 py-2 border border-gray-300 rounded-lg
-          focus:outline-none focus:ring-2 focus:ring-blue-500
-          ${disabled || isLoading ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
-        `}
+        $isDisabled={disabled || isLoading}
       >
         {isLoading ? (
           <option>Loading models...</option>
@@ -81,13 +118,13 @@ export function ModelSelector({
             )}
           </>
         )}
-      </select>
+      </Select>
 
       {isLoading && (
-        <div className="mt-1 text-xs text-gray-500">
+        <LoadingHint>
           Loading additional models...
-        </div>
+        </LoadingHint>
       )}
-    </div>
+    </Container>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect, useCallback } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '../ui/Button';
+import styled, { css } from 'styled-components';
 
 interface RawJSONPreviewProps {
   data: unknown;
@@ -21,11 +22,11 @@ interface RawJSONPreviewProps {
 function parseUIPath(uiPath: string): (string | number)[] {
   // Only treat "root" as document root if it's the entire path
   if (!uiPath || uiPath === 'root') return [];
-  
+
   const segments: (string | number)[] = [];
   const regex = /([^.\[\]]+)|\[(\d+)\]/g;
   let match;
-  
+
   while ((match = regex.exec(uiPath)) !== null) {
     if (match[1] !== undefined) {
       segments.push(match[1]);
@@ -33,7 +34,7 @@ function parseUIPath(uiPath: string): (string | number)[] {
       segments.push(parseInt(match[2], 10));
     }
   }
-  
+
   return segments;
 }
 
@@ -60,7 +61,7 @@ function findPathLineRange(
   for (let lineNum = 0; lineNum < lines.length; lineNum++) {
     const line = lines[lineNum];
     const trimmedLine = line.trim();
-    
+
     // Track bracket depth for found element
     if (foundStart >= 0) {
       for (const char of line) {
@@ -92,15 +93,15 @@ function findPathLineRange(
     }
 
     if (segmentIndex >= pathSegments.length) continue;
-    
+
     const targetSegment = pathSegments[segmentIndex];
-    
+
     if (typeof targetSegment === 'string' && !inArray) {
       // Look for object key
       const keyPattern = new RegExp(`^"${escapeRegex(targetSegment)}"\\s*:`);
       if (keyPattern.test(trimmedLine)) {
         segmentIndex++;
-        
+
         if (segmentIndex >= pathSegments.length) {
           // Found the target
           foundStart = lineNum;
@@ -129,24 +130,24 @@ function findPathLineRange(
           arrayIndex = 0;
         }
       }
-      
+
       if (inArray) {
         // Check if this line starts an array element
-        const isElementStart = 
-          trimmedLine.startsWith('{') || 
-          trimmedLine.startsWith('[') || 
-          trimmedLine.startsWith('"') || 
+        const isElementStart =
+          trimmedLine.startsWith('{') ||
+          trimmedLine.startsWith('[') ||
+          trimmedLine.startsWith('"') ||
           /^-?\d/.test(trimmedLine) ||
           trimmedLine === 'true' || trimmedLine === 'true,' ||
           trimmedLine === 'false' || trimmedLine === 'false,' ||
           trimmedLine === 'null' || trimmedLine === 'null,';
-        
+
         if (isElementStart) {
           if (arrayIndex === targetSegment) {
             segmentIndex++;
             inArray = false;
             arrayIndex = 0;
-            
+
             if (segmentIndex >= pathSegments.length) {
               foundStart = lineNum;
               if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
@@ -181,20 +182,20 @@ function escapeRegex(string: string): string {
 function buildLineToPathMap(jsonString: string): Map<number, string> {
   const lineToPath = new Map<number, string>();
   const lines = jsonString.split('\n');
-  
+
   // Track the path as an array of segments
   const pathStack: (string | number)[] = [];
-  
+
   // Track container types at each nesting level: 'object' or 'array'
   const containerStack: ('object' | 'array')[] = [];
-  
+
   // Track array indices at each array level
   const arrayIndexStack: number[] = [];
-  
+
   // Track whether we've seen a key at the current object level
   // (used to know if we should replace vs push)
   let lastKeyDepth = -1;
-  
+
   // Build path string from pathStack - matches TreeView format
   const buildPathString = (): string => {
     if (pathStack.length === 0) return 'root';
@@ -211,39 +212,39 @@ function buildLineToPathMap(jsonString: string): Map<number, string> {
     }
     return path;
   };
-  
+
   for (let lineNum = 0; lineNum < lines.length; lineNum++) {
     const line = lines[lineNum];
     const trimmed = line.trim();
-    
+
     // Skip empty lines
     if (!trimmed) continue;
-    
+
     // Count opening/closing brackets on this line to handle same-line open/close
     const openBraces = (trimmed.match(/\{/g) || []).length;
     const closeBraces = (trimmed.match(/\}/g) || []).length;
     const openBrackets = (trimmed.match(/\[/g) || []).length;
     const closeBrackets = (trimmed.match(/\]/g) || []).length;
-    
+
     // Check for object key
     const keyMatch = trimmed.match(/^"([^"]+)"\s*:/);
     if (keyMatch) {
       const key = keyMatch[1];
       const currentDepth = containerStack.length;
-      
+
       // If we're at the same depth as the last key, replace it
       if (lastKeyDepth === currentDepth && pathStack.length > 0 && typeof pathStack[pathStack.length - 1] === 'string') {
         pathStack.pop();
       }
-      
+
       pathStack.push(key);
       lastKeyDepth = currentDepth;
       lineToPath.set(lineNum, buildPathString());
-      
+
       // Check if this key's value opens a new container
       const valueOpensObject = trimmed.includes('{');
       const valueOpensArray = trimmed.includes('[');
-      
+
       // Handle containers opened on this line
       if (valueOpensObject) {
         containerStack.push('object');
@@ -266,14 +267,14 @@ function buildLineToPathMap(jsonString: string): Map<number, string> {
       }
       continue;
     }
-    
+
     // Check for standalone opening brace at root
     if (trimmed === '{' && containerStack.length === 0) {
       lineToPath.set(lineNum, 'root');
       containerStack.push('object');
       continue;
     }
-    
+
     // Check for standalone opening bracket at root
     if (trimmed === '[' && containerStack.length === 0) {
       lineToPath.set(lineNum, 'root');
@@ -281,21 +282,21 @@ function buildLineToPathMap(jsonString: string): Map<number, string> {
       arrayIndexStack.push(0);
       continue;
     }
-    
+
     // Check for array element (when we're inside an array)
     if (containerStack.length > 0 && containerStack[containerStack.length - 1] === 'array') {
       // This line starts an array element
-      if (trimmed.startsWith('{') || trimmed.startsWith('[') || 
+      if (trimmed.startsWith('{') || trimmed.startsWith('[') ||
           trimmed.startsWith('"') || /^-?\d/.test(trimmed) ||
           trimmed === 'true' || trimmed === 'true,' ||
           trimmed === 'false' || trimmed === 'false,' ||
           trimmed === 'null' || trimmed === 'null,') {
-        
+
         const idx = arrayIndexStack[arrayIndexStack.length - 1];
         pathStack.push(idx);
         arrayIndexStack[arrayIndexStack.length - 1]++;
         lineToPath.set(lineNum, buildPathString());
-        
+
         if (trimmed.startsWith('{')) {
           containerStack.push('object');
           // Check if closes on same line
@@ -319,7 +320,7 @@ function buildLineToPathMap(jsonString: string): Map<number, string> {
         continue;
       }
     }
-    
+
     // Check for closing brackets
     if (trimmed === '}' || trimmed === '},' || trimmed === ']' || trimmed === '],') {
       if (containerStack.length > 0) {
@@ -327,12 +328,12 @@ function buildLineToPathMap(jsonString: string): Map<number, string> {
         if (containerType === 'array') {
           arrayIndexStack.pop();
         }
-        
+
         // Pop the last key from pathStack (if the last item is a string key)
         if (pathStack.length > 0 && typeof pathStack[pathStack.length - 1] === 'string') {
           pathStack.pop();
         }
-        
+
         // If the closed container was an array element (object/array inside an array),
         // also pop the array index from pathStack
         if (containerStack.length > 0 && containerStack[containerStack.length - 1] === 'array') {
@@ -341,23 +342,120 @@ function buildLineToPathMap(jsonString: string): Map<number, string> {
           }
         }
       }
-      
+
       // Update lastKeyDepth
       lastKeyDepth = containerStack.length;
-      
+
       // Map closing bracket to the parent path
       lineToPath.set(lineNum, buildPathString());
     }
   }
-  
+
   return lineToPath;
 }
 
-export function RawJSONPreview({ data, selectedPath, editingPath, onSelectPath, highlightedLine, wrapText = true, className = '' }: RawJSONPreviewProps) {
+/* ── styled-components ── */
+
+const Wrapper = styled.div`
+  position: relative;
+`;
+
+const CopyButtonWrapper = styled.div`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+`;
+
+const CodePre = styled.pre<{ $wrap: boolean }>`
+  height: 100%;
+  overflow: auto;
+  padding: 48px 16px 16px;
+  background: ${p => p.theme.colors.bgSecondary};
+  border-radius: ${p => p.theme.radii.lg};
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-family: ${p => p.theme.fonts.mono};
+  line-height: 20px;
+  color: ${p => p.theme.colors.textPrimary};
+  margin: 0;
+
+  ${p =>
+    p.$wrap
+      ? css`
+          white-space: pre-wrap;
+          word-break: break-word;
+        `
+      : css`
+          white-space: pre;
+        `}
+`;
+
+const JsonLine = styled.div<{
+  $clickable: boolean;
+  $highlighted: boolean;
+  $editing: boolean;
+  $errorHighlighted: boolean;
+}>`
+  position: relative;
+  display: flex;
+
+  ${p =>
+    p.$clickable &&
+    css`
+      cursor: pointer;
+      &:hover {
+        background: ${p.theme.colors.bgTertiary};
+      }
+    `}
+
+  ${p =>
+    p.$highlighted &&
+    css`
+      background: ${p.theme.colors.accent}1a;
+    `}
+
+  ${p =>
+    p.$editing &&
+    css`
+      background: ${p.theme.colors.accent}33;
+    `}
+
+  ${p =>
+    p.$errorHighlighted &&
+    css`
+      background: ${p.theme.colors.error}33;
+      box-shadow: inset 0 0 0 1px ${p.theme.colors.error}80;
+    `}
+`;
+
+const LineNumber = styled.span`
+  width: 40px;
+  flex-shrink: 0;
+  padding-right: 12px;
+  text-align: right;
+  color: ${p => p.theme.colors.textSecondary}80;
+  user-select: none;
+`;
+
+const LineContent = styled.span`
+  flex: 1;
+`;
+
+const CopiedLabel = styled.span`
+  font-size: ${p => p.theme.fontSizes.xs};
+`;
+
+const CopyLabel = styled.span`
+  font-size: ${p => p.theme.fontSizes.xs};
+`;
+
+/* ── component ── */
+
+export function RawJSONPreview({ data, selectedPath, editingPath, onSelectPath, highlightedLine, wrapText = true, className }: RawJSONPreviewProps) {
   const [copied, setCopied] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
   const highlightedLineRef = useRef<HTMLDivElement>(null);
-  
+
   const jsonString = useMemo(() => {
     try {
       return JSON.stringify(data, null, 2);
@@ -365,7 +463,7 @@ export function RawJSONPreview({ data, selectedPath, editingPath, onSelectPath, 
       return 'Error serializing JSON';
     }
   }, [data]);
-  
+
   // Build line-to-path mapping
   const lineToPath = useMemo(() => buildLineToPathMap(jsonString), [jsonString]);
 
@@ -381,7 +479,7 @@ export function RawJSONPreview({ data, selectedPath, editingPath, onSelectPath, 
 
   // Determine which path to highlight (editing takes priority)
   const highlightPath = editingPath || selectedPath;
-  
+
   // Find line range for selected/editing path
   const highlightRange = useMemo(() => {
     if (!highlightPath) return null;
@@ -401,7 +499,7 @@ export function RawJSONPreview({ data, selectedPath, editingPath, onSelectPath, 
   // Create line elements with syntax highlighting
   const jsonLines = useMemo(() => {
     const lines = jsonString.split('\n');
-    
+
     return lines.map((line, index) => {
       // Apply syntax highlighting
       let highlighted = line
@@ -413,21 +511,21 @@ export function RawJSONPreview({ data, selectedPath, editingPath, onSelectPath, 
         .replace(/:\s*(-?\d+\.?\d*)/g, ': <span class="json-number">$1</span>')
         .replace(/:\s*(true|false)/g, ': <span class="json-boolean">$1</span>')
         .replace(/:\s*(null)/g, ': <span class="json-null">$1</span>');
-      
+
       // Check if this line should be highlighted
-      const isHighlighted = highlightRange && 
-        index >= highlightRange.startLine && 
+      const isHighlighted = highlightRange &&
+        index >= highlightRange.startLine &&
         index <= highlightRange.endLine;
-      
+
       const isEditing = editingPath && highlightRange &&
-        index >= highlightRange.startLine && 
+        index >= highlightRange.startLine &&
         index <= highlightRange.endLine;
-      
+
       const hasPath = lineToPath.has(index);
-      
+
       // Check if this line should be highlighted due to error click (1-based to 0-based)
       const isErrorHighlighted = highlightedLine !== null && highlightedLine !== undefined && index === highlightedLine - 1;
-      
+
       return {
         html: highlighted,
         isHighlighted,
@@ -462,62 +560,51 @@ export function RawJSONPreview({ data, selectedPath, editingPath, onSelectPath, 
   }, [highlightedLine]);
 
   return (
-    <div className={`relative ${className}`}>
-      <div className="absolute top-2 right-2 z-10">
+    <Wrapper className={className}>
+      <CopyButtonWrapper>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleCopy}
-          className="bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)]"
         >
           {copied ? (
             <>
-              <Check className="w-3 h-3 text-[var(--success-color)]" />
-              <span className="text-xs">Copied!</span>
+              <Check size={12} />
+              <CopiedLabel>Copied!</CopiedLabel>
             </>
           ) : (
             <>
-              <Copy className="w-3 h-3" />
-              <span className="text-xs">Copy</span>
+              <Copy size={12} />
+              <CopyLabel>Copy</CopyLabel>
             </>
           )}
         </Button>
-      </div>
-      <pre
+      </CopyButtonWrapper>
+      <CodePre
         ref={preRef}
-        className={`
-          h-full overflow-auto p-4 pt-12
-          bg-[var(--bg-secondary)] rounded-lg
-          text-sm font-mono leading-5
-          text-[var(--text-primary)]
-          ${wrapText ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'}
-        `}
+        $wrap={wrapText}
       >
         {jsonLines.map((line) => (
-          <div
+          <JsonLine
             key={line.lineNum}
             ref={line.isErrorHighlighted ? highlightedLineRef : undefined}
             onClick={() => line.hasPath && handleLineClick(line.lineNum)}
-            className={`
-              relative flex
-              ${line.hasPath && onSelectPath ? 'cursor-pointer hover:bg-[var(--bg-tertiary)]' : ''}
-              ${line.isHighlighted ? 'bg-[var(--accent-color)]/10' : ''}
-              ${line.isEditing ? 'bg-[var(--accent-color)]/20' : ''}
-              ${line.isErrorHighlighted ? 'bg-[var(--error-color)]/20 ring-1 ring-[var(--error-color)]/50' : ''}
-            `}
+            $clickable={!!line.hasPath && !!onSelectPath}
+            $highlighted={!!line.isHighlighted}
+            $editing={!!line.isEditing}
+            $errorHighlighted={!!line.isErrorHighlighted}
           >
             {/* Line number */}
-            <span className="w-10 flex-shrink-0 pr-3 text-right text-[var(--text-secondary)]/50 select-none">
+            <LineNumber>
               {line.lineNum + 1}
-            </span>
+            </LineNumber>
             {/* Line content */}
-            <span 
-              className="flex-1"
+            <LineContent
               dangerouslySetInnerHTML={{ __html: line.html || '&nbsp;' }}
             />
-          </div>
+          </JsonLine>
         ))}
-      </pre>
-    </div>
+      </CodePre>
+    </Wrapper>
   );
 }

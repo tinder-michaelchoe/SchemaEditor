@@ -4,8 +4,87 @@
  */
 
 import React, { useState } from 'react';
+import styled, { css } from 'styled-components';
 import { Modal } from '@/components/ui/Modal';
 import { SystemPromptEditor } from './SystemPromptEditor';
+
+/* ── Styled Components ── */
+
+const ModalBody = styled.div`
+  display: flex;
+  height: 600px;
+`;
+
+const TabSidebar = styled.div`
+  width: 12rem;
+  border-right: 1px solid ${p => p.theme.colors.border};
+  padding-right: 1rem;
+`;
+
+const TabNav = styled.nav`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const TabButton = styled.button<{
+  $active: boolean;
+  $disabled?: boolean;
+}>`
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: ${p => p.theme.radii.lg};
+  font-size: ${p => p.theme.fontSizes.sm};
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+
+  ${p =>
+    p.$active &&
+    css`
+      background: ${p.theme.colors.accent}1a;
+      color: ${p.theme.colors.accent};
+      font-weight: 500;
+    `}
+
+  ${p =>
+    !p.$active &&
+    !p.$disabled &&
+    css`
+      color: ${p.theme.colors.textPrimary};
+      &:hover {
+        background: ${p.theme.colors.bgTertiary};
+      }
+    `}
+
+  ${p =>
+    p.$disabled &&
+    css`
+      color: ${p.theme.colors.textTertiary};
+      cursor: not-allowed;
+    `}
+`;
+
+const SoonLabel = styled.span`
+  margin-left: 0.25rem;
+  font-size: ${p => p.theme.fontSizes.xs};
+`;
+
+const TabContent = styled.div`
+  flex: 1;
+  padding-left: 1rem;
+  overflow: auto;
+`;
+
+const PlaceholderText = styled.div`
+  color: ${p => p.theme.colors.textSecondary};
+  text-align: center;
+  padding: 2rem 0;
+`;
+
+/* ── Component ── */
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -33,50 +112,42 @@ export function SettingsModal({
       title="Settings"
       size="large"
     >
-      <div className="flex h-[600px]">
+      <ModalBody>
         {/* Tabs Sidebar */}
-        <div className="w-48 border-r border-gray-200 pr-4">
-          <nav className="space-y-1">
+        <TabSidebar>
+          <TabNav>
             {tabs.map((tab) => (
-              <button
+              <TabButton
                 key={tab.id}
                 onClick={() => !tab.disabled && setActiveTab(tab.id)}
                 disabled={tab.disabled}
-                className={`
-                  w-full text-left px-3 py-2 rounded-lg text-sm transition-colors
-                  ${
-                    activeTab === tab.id
-                      ? 'bg-blue-100 text-blue-900 font-medium'
-                      : tab.disabled
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }
-                `}
+                $active={activeTab === tab.id}
+                $disabled={tab.disabled}
               >
                 {tab.label}
                 {tab.disabled && (
-                  <span className="ml-1 text-xs">(Soon)</span>
+                  <SoonLabel>(Soon)</SoonLabel>
                 )}
-              </button>
+              </TabButton>
             ))}
-          </nav>
-        </div>
+          </TabNav>
+        </TabSidebar>
 
         {/* Tab Content */}
-        <div className="flex-1 pl-4 overflow-auto">
+        <TabContent>
           {activeTab === 'prompt' && <SystemPromptEditor />}
           {activeTab === 'api' && (
-            <div className="text-gray-500 text-center py-8">
+            <PlaceholderText>
               API Settings coming soon
-            </div>
+            </PlaceholderText>
           )}
           {activeTab === 'preferences' && (
-            <div className="text-gray-500 text-center py-8">
+            <PlaceholderText>
               Preferences coming soon
-            </div>
+            </PlaceholderText>
           )}
-        </div>
-      </div>
+        </TabContent>
+      </ModalBody>
     </Modal>
   );
 }

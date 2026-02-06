@@ -1,8 +1,67 @@
 import { useEffect, useRef } from 'react';
+import styled from 'styled-components';
 import { useEditorStore } from '../store/editorStore';
 import { TreeNode } from './TreeView';
 import { Badge } from './ui/Badge';
 import { Collapsible } from './ui/Collapsible';
+
+/* ── Styled Components ── */
+
+const EmptyState = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const EmptyStateInner = styled.div`
+  text-align: center;
+`;
+
+const EmptyTitle = styled.p`
+  font-size: ${p => p.theme.fontSizes.lg};
+  margin: 0 0 0.5rem;
+`;
+
+const EmptySubtitle = styled.p`
+  font-size: ${p => p.theme.fontSizes.sm};
+  margin: 0;
+`;
+
+const ScrollContainer = styled.div`
+  height: 100%;
+  overflow: auto;
+  padding: 1rem;
+
+  /* Allow long text in tree nodes to wrap */
+  word-break: break-word;
+`;
+
+const BadgeGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+`;
+
+const ContentArea = styled.div`
+  padding: 0.75rem;
+`;
+
+const ErrorBlock = styled.div`
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  border-radius: ${p => p.theme.radii.lg};
+  background: ${p => p.theme.colors.error}1a;
+  border: 1px solid ${p => p.theme.colors.error};
+`;
+
+const ErrorMessage = styled.div`
+  font-size: ${p => p.theme.fontSizes.sm};
+  color: ${p => p.theme.colors.error};
+`;
+
+/* ── Component ── */
 
 export function SchemaEditor() {
   const {
@@ -19,18 +78,18 @@ export function SchemaEditor() {
     setSelectedPath,
     setEditingPath,
   } = useEditorStore();
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   // Auto-scroll to selected item when selection changes
   useEffect(() => {
     if (selectedPath && containerRef.current) {
       const nodeId = `node-${selectedPath}`;
-      
+
       // Try to scroll to element, with retries for newly expanded content
       const scrollToElement = (attempts: number = 0) => {
         const element = document.getElementById(nodeId);
-        
+
         if (element) {
           element.scrollIntoView({
             behavior: 'smooth',
@@ -41,7 +100,7 @@ export function SchemaEditor() {
           setTimeout(() => scrollToElement(attempts + 1), 100);
         }
       };
-      
+
       // Initial delay to allow React to render expanded nodes
       setTimeout(() => scrollToElement(), 100);
     }
@@ -49,12 +108,12 @@ export function SchemaEditor() {
 
   if (!schema || !schemaContext) {
     return (
-      <div className="flex items-center justify-center h-full text-[var(--text-secondary)]">
-        <div className="text-center">
-          <p className="text-lg mb-2">No schema loaded</p>
-          <p className="text-sm">Load a JSON Schema to start editing</p>
-        </div>
-      </div>
+      <EmptyState>
+        <EmptyStateInner>
+          <EmptyTitle>No schema loaded</EmptyTitle>
+          <EmptySubtitle>Load a JSON Schema to start editing</EmptySubtitle>
+        </EmptyStateInner>
+      </EmptyState>
     );
   }
 
@@ -65,7 +124,7 @@ export function SchemaEditor() {
   const isRootSelected = selectedPath === rootPathStr;
 
   return (
-    <div ref={containerRef} className="h-full overflow-auto p-4 tree-wrap-text">
+    <ScrollContainer ref={containerRef}>
       <Collapsible
         nodeId="node-root"
         isOpen={isRootExpanded}
@@ -75,24 +134,24 @@ export function SchemaEditor() {
         title={schema.title || 'Document'}
         subtitle={schema.description}
         badge={
-          <div className="flex items-center gap-1">
+          <BadgeGroup>
             {!isValid && <Badge variant="error">Invalid</Badge>}
             <Badge variant="type">object</Badge>
-          </div>
+          </BadgeGroup>
         }
         error={!!rootErrors}
       >
-        <div className="p-3">
+        <ContentArea>
           {rootErrors && (
-            <div className="mb-3 p-2 rounded-lg bg-[var(--error-color)]/10 border border-[var(--error-color)]">
+            <ErrorBlock>
               {rootErrors.map((e, i) => (
-                <div key={i} className="text-sm text-[var(--error-color)]">
+                <ErrorMessage key={i}>
                   {e.message}
-                </div>
+                </ErrorMessage>
               ))}
-            </div>
+            </ErrorBlock>
           )}
-          
+
           <TreeNode
             value={data}
             onChange={(newValue) => updateValue([], newValue)}
@@ -108,8 +167,8 @@ export function SchemaEditor() {
             onEditingChange={setEditingPath}
             errors={errors}
           />
-        </div>
+        </ContentArea>
       </Collapsible>
-    </div>
+    </ScrollContainer>
   );
 }

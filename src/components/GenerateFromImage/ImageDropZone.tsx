@@ -5,7 +5,142 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { Upload, Trash2 } from 'lucide-react';
+import styled, { css } from 'styled-components';
 import { imageUtils } from '../../services/imageUtils';
+
+/* ------------------------------------------------------------------ */
+/*  Styled Components                                                  */
+/* ------------------------------------------------------------------ */
+
+const Container = styled.div`
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+`;
+
+const DropArea = styled.div<{
+  $isDragging: boolean;
+  $hasImage: boolean;
+  $disabled: boolean;
+}>`
+  position: relative;
+  border: 2px dashed;
+  border-radius: 8px;
+  padding: 16px;
+  transition: border-color 0.15s, background-color 0.15s;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  border-color: ${p =>
+    p.$isDragging ? '#3b82f6' : p.theme.colors.border};
+  background: ${p =>
+    p.$isDragging ? 'rgba(59, 130, 246, 0.05)' : 'transparent'};
+
+  ${p =>
+    !p.$hasImage &&
+    !p.$disabled &&
+    css`
+      cursor: pointer;
+      &:hover {
+        border-color: ${p.theme.colors.textSecondary};
+      }
+    `}
+
+  ${p =>
+    p.$disabled &&
+    css`
+      opacity: 0.5;
+      cursor: not-allowed;
+    `}
+`;
+
+const PreviewWrapper = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+`;
+
+const ImageContainer = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+`;
+
+const PreviewImage = styled.img`
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+`;
+
+const RemoveButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ef4444;
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: #dc2626;
+  }
+`;
+
+const FileName = styled.div`
+  margin-top: 8px;
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textSecondary};
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+`;
+
+const UploadPrompt = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: ${p => p.theme.colors.textSecondary};
+`;
+
+const UploadTitle = styled.p`
+  font-size: ${p => p.theme.fontSizes.sm};
+  font-weight: 500;
+  margin-bottom: 4px;
+`;
+
+const UploadSubtext = styled.p`
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textTertiary};
+`;
+
+const UploadFormats = styled.p`
+  font-size: ${p => p.theme.fontSizes.xs};
+  color: ${p => p.theme.colors.textTertiary};
+  margin-top: 8px;
+`;
+
+const ErrorMessage = styled.div`
+  margin-top: 8px;
+  font-size: ${p => p.theme.fontSizes.sm};
+  color: #ef4444;
+  flex-shrink: 0;
+`;
+
+/* ------------------------------------------------------------------ */
+/*  Props                                                              */
+/* ------------------------------------------------------------------ */
 
 interface ImageDropZoneProps {
   onImageSelect: (file: File) => void;
@@ -94,7 +229,7 @@ export function ImageDropZone({
   };
 
   return (
-    <div className="image-drop-zone h-full flex flex-col">
+    <Container>
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -106,13 +241,10 @@ export function ImageDropZone({
       />
 
       {/* Drop zone */}
-      <div
-        className={`
-          relative border-2 border-dashed rounded-lg p-4 transition-colors flex-1 flex flex-col
-          ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}
-          ${!imageFile && !disabled ? 'cursor-pointer hover:border-gray-400' : ''}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-        `}
+      <DropArea
+        $isDragging={isDragging}
+        $hasImage={!!imageFile}
+        $disabled={disabled}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -120,50 +252,48 @@ export function ImageDropZone({
       >
         {previewUrl ? (
           // Image preview
-          <div className="relative flex flex-col h-full">
-            <div className="flex-1 flex items-center justify-center overflow-hidden">
-              <img
+          <PreviewWrapper>
+            <ImageContainer>
+              <PreviewImage
                 src={previewUrl}
                 alt="Preview"
-                className="max-w-full max-h-full object-contain rounded"
               />
-            </div>
+            </ImageContainer>
             {!disabled && (
-              <button
+              <RemoveButton
                 onClick={handleRemove}
-                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition-colors"
                 title="Delete image"
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
+                <Trash2 size={16} />
+              </RemoveButton>
             )}
-            <div className="mt-2 text-xs text-gray-600 text-center truncate flex-shrink-0">
+            <FileName>
               {imageFile?.name}
-            </div>
-          </div>
+            </FileName>
+          </PreviewWrapper>
         ) : (
           // Upload prompt
-          <div className="flex flex-col items-center justify-center flex-1 text-gray-500">
-            <Upload className="w-12 h-12 mb-3" />
-            <p className="text-sm font-medium mb-1">
+          <UploadPrompt>
+            <Upload size={48} />
+            <UploadTitle>
               Drag and drop an image here
-            </p>
-            <p className="text-xs text-gray-400">
+            </UploadTitle>
+            <UploadSubtext>
               or click to browse
-            </p>
-            <p className="text-xs text-gray-400 mt-2">
+            </UploadSubtext>
+            <UploadFormats>
               PNG, JPG, WEBP (max 10MB)
-            </p>
-          </div>
+            </UploadFormats>
+          </UploadPrompt>
         )}
-      </div>
+      </DropArea>
 
       {/* Error message */}
       {error && (
-        <div className="mt-2 text-sm text-red-600 flex-shrink-0">
+        <ErrorMessage>
           {error}
-        </div>
+        </ErrorMessage>
       )}
-    </div>
+    </Container>
   );
 }
