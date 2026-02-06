@@ -1,4 +1,3 @@
-import { useEffect, useCallback } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -150,15 +149,5 @@ export const usePersistentUIStore = create<PersistentUIState>()(
  */
 export function usePersistence() {
   const store = usePersistentUIStore();
-  
-  // Sync dark mode with document
-  useEffect(() => {
-    if (store.isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [store.isDarkMode]);
-  
   return store;
 }

@@ -3,6 +3,9 @@
  * Integrates all visual editing plugins into a cohesive application
  */
 import React, { useCallback, useState, useEffect } from 'react';
+import { ThemeProvider } from 'styled-components';
+import { lightTheme, darkTheme } from './styles/theme';
+import { GlobalStyles } from './styles/GlobalStyles';
 import { useEditorStore } from './store/editorStore';
 import { usePersistence } from './plugins/app-shell/hooks/usePersistence';
 import { AppShell } from './plugins/app-shell/components/AppShell';
@@ -117,9 +120,11 @@ function App() {
   ];
 
   const errorCount = errors.size;
+  const theme = isDarkMode ? darkTheme : lightTheme;
 
   return (
-    <>
+    <ThemeProvider theme={theme}>
+      <GlobalStyles />
       <AppShell
         leftTabs={leftTabs}
         rightTabs={rightTabs}
@@ -150,7 +155,7 @@ function App() {
 
       {/* Global drag preview */}
       <DragPreview />
-    </>
+    </ThemeProvider>
   );
 }
 
