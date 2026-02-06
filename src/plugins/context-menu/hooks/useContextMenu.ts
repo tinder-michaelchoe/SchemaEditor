@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorState } from '@/store/EditorContext';
 import { getContextMenuRegistry } from '../ContextMenuRegistry';
 import { getValueAtPath, stringToPath, pathToString } from '@/utils/pathUtils';
 import type { ContextMenuAction, ActionContext } from '../types';
@@ -16,7 +16,7 @@ export function useContextMenu() {
   const [componentPath, setComponentPath] = useState<string | null>(null);
   const [actions, setActions] = useState<ContextMenuAction[]>([]);
 
-  const data = useEditorStore((state) => state.data);
+  const { data } = useEditorState();
 
   /**
    * Show the context menu at a specific position for a component

@@ -55,18 +55,19 @@ import { pluginRegistry } from './PluginRegistry';
 import { pluginContextFactory, type CoreStores } from './PluginContext';
 import { actionAPI } from './ActionAPI';
 import { simpleAPIFactory } from './SimpleAPI';
-import { slotManager } from './SlotManager';
 import { eventBus } from './EventBus';
 import { createDocumentStoreAdapter } from './store/documentStore';
 import { getSelectionStoreInterface } from './store/selectionStore';
 import { getUIStoreInterface } from './store/uiStore';
-import { useEditorStore } from '../store/editorStore';
+import { editorStoreRef } from '../store/storeRefs';
 
 let initialized = false;
 
 /**
  * Initialize the core plugin system
- * Should be called once at application startup
+ * Should be called once at application startup.
+ * Relies on store refs being populated by Providers before this runs.
+ * SlotManager updates are handled by EditorProvider's useEffect.
  */
 export function initializeCore(): void {
   if (initialized) {
@@ -74,14 +75,14 @@ export function initializeCore(): void {
     return;
   }
 
-  // Create core stores interface
+  // Create core stores interface (reads through refs)
   const coreStores: CoreStores = {
     document: {
-      getSchema: () => useEditorStore.getState().schema,
-      getSchemaContext: () => useEditorStore.getState().schemaContext,
-      getData: () => useEditorStore.getState().data,
-      getErrors: () => useEditorStore.getState().errors,
-      isValid: () => useEditorStore.getState().isValid,
+      getSchema: () => editorStoreRef.current?.schema ?? null,
+      getSchemaContext: () => editorStoreRef.current?.schemaContext ?? null,
+      getData: () => editorStoreRef.current?.data ?? null,
+      getErrors: () => editorStoreRef.current?.errors ?? new Map(),
+      isValid: () => editorStoreRef.current?.isValid ?? true,
     },
     selection: getSelectionStoreInterface(),
     ui: getUIStoreInterface(),
@@ -101,23 +102,8 @@ export function initializeCore(): void {
     return pluginContextFactory.createContext(manifest);
   });
 
-  // Update slot manager context when store changes
-  const updateSlotContext = () => {
-    const state = useEditorStore.getState();
-    slotManager.updateContext({
-      hasDocument: state.schema !== null,
-      hasSelection: state.selectedPath !== null,
-      isDarkMode: state.isDarkMode,
-      selectedPath: state.selectedPath,
-      hasErrors: state.errors.size > 0,
-    });
-  };
-
-  // Initial update
-  updateSlotContext();
-
-  // Subscribe to store changes
-  useEditorStore.subscribe(updateSlotContext);
+  // Note: SlotManager context updates are handled by EditorProvider's useEffect
+  // (replaces the old useEditorStore.subscribe(updateSlotContext) call)
 
   initialized = true;
   console.log('Core plugin system initialized');

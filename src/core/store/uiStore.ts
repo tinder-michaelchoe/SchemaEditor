@@ -1,25 +1,26 @@
 /**
  * UI Store
- * 
+ *
  * Core store for UI state (theme, view mode, expanded paths).
- * This is a thin wrapper that integrates with the existing editorStore.
+ * Uses EditorContext + UIContext for React access, refs for imperative access.
  */
 
-import { create } from 'zustand';
-import { useEditorStore } from '../../store/editorStore';
+import { useEditorState, useEditorActions } from '../../store/EditorContext';
+import { useUIState as useUIContextState } from '../../store/UIContext';
+import { editorStoreRef, uiStoreRef } from '../../store/storeRefs';
 import type { ViewMode } from '../types/plugin';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-interface UIState {
+interface CoreUIState {
   isDarkMode: boolean;
   viewMode: ViewMode;
   expandedPaths: Set<string>;
 }
 
-interface UIActions {
+interface CoreUIActions {
   toggleDarkMode: () => void;
   setViewMode: (mode: ViewMode) => void;
   toggleExpanded: (path: string) => void;
@@ -28,34 +29,19 @@ interface UIActions {
 }
 
 // ============================================================================
-// View Mode Store (not in editor store)
-// ============================================================================
-
-/**
- * Separate store for view mode since it's not in the main editor store
- */
-const useViewModeStore = create<{
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
-}>((set) => ({
-  viewMode: 'tree',
-  setViewMode: (mode) => set({ viewMode: mode }),
-}));
-
-// ============================================================================
 // UI Hooks
 // ============================================================================
 
 /**
  * Hook to access UI state
  */
-export function useUIState(): UIState {
-  const { isDarkMode, expandedPaths } = useEditorStore();
-  const { viewMode } = useViewModeStore();
-  
+export function useUIState(): CoreUIState {
+  const { isDarkMode, expandedPaths } = useEditorState();
+  const { viewMode } = useUIContextState();
+
   return {
     isDarkMode,
-    viewMode,
+    viewMode: viewMode as ViewMode,
     expandedPaths,
   };
 }
@@ -63,19 +49,16 @@ export function useUIState(): UIState {
 /**
  * Hook to access UI actions
  */
-export function useUIActions(): UIActions {
-  const toggleDarkMode = useEditorStore((state) => state.toggleDarkMode);
-  const toggleExpanded = useEditorStore((state) => state.toggleExpanded);
-  const expandAll = useEditorStore((state) => state.expandAll);
-  const collapseAll = useEditorStore((state) => state.collapseAll);
-  const setViewMode = useViewModeStore((state) => state.setViewMode);
-  
+export function useUIActions(): CoreUIActions {
+  const editorActions = useEditorActions();
+  const uiState = useUIContextState();
+
   return {
-    toggleDarkMode,
-    setViewMode,
-    toggleExpanded,
-    expandAll,
-    collapseAll,
+    toggleDarkMode: editorActions.toggleDarkMode,
+    setViewMode: (mode: ViewMode) => uiStoreRef.current?.setViewMode(mode),
+    toggleExpanded: editorActions.toggleExpanded,
+    expandAll: editorActions.expandAll,
+    collapseAll: editorActions.collapseAll,
   };
 }
 
@@ -83,35 +66,38 @@ export function useUIActions(): UIActions {
  * Hook to get dark mode state
  */
 export function useIsDarkMode(): boolean {
-  return useEditorStore((state) => state.isDarkMode);
+  const { isDarkMode } = useEditorState();
+  return isDarkMode;
 }
 
 /**
  * Hook to get view mode
  */
 export function useViewMode(): ViewMode {
-  return useViewModeStore((state) => state.viewMode);
+  const { viewMode } = useUIContextState();
+  return viewMode as ViewMode;
 }
 
 /**
  * Hook to get expanded paths
  */
 export function useExpandedPaths(): Set<string> {
-  return useEditorStore((state) => state.expandedPaths);
+  const { expandedPaths } = useEditorState();
+  return expandedPaths;
 }
 
 /**
- * Get UI store interface for CoreStores
+ * Get UI store interface for CoreStores (imperative access)
  */
 export function getUIStoreInterface() {
   return {
-    isDarkMode: () => useEditorStore.getState().isDarkMode,
-    getViewMode: () => useViewModeStore.getState().viewMode,
-    getExpandedPaths: () => useEditorStore.getState().expandedPaths,
-    toggleDarkMode: () => useEditorStore.getState().toggleDarkMode(),
-    setViewMode: (mode: ViewMode) => useViewModeStore.getState().setViewMode(mode),
-    toggleExpanded: (path: string) => useEditorStore.getState().toggleExpanded(path),
-    expandAll: () => useEditorStore.getState().expandAll(),
-    collapseAll: () => useEditorStore.getState().collapseAll(),
+    isDarkMode: () => editorStoreRef.current?.isDarkMode ?? false,
+    getViewMode: () => (uiStoreRef.current?.viewMode ?? 'tree') as ViewMode,
+    getExpandedPaths: () => editorStoreRef.current?.expandedPaths ?? new Set(['root']),
+    toggleDarkMode: () => editorStoreRef.current?.toggleDarkMode(),
+    setViewMode: (mode: ViewMode) => uiStoreRef.current?.setViewMode(mode),
+    toggleExpanded: (path: string) => editorStoreRef.current?.toggleExpanded(path),
+    expandAll: () => editorStoreRef.current?.expandAll(),
+    collapseAll: () => editorStoreRef.current?.collapseAll(),
   };
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { useEditorStore } from '../store/editorStore';
+import { useEditor } from '../store/EditorContext';
 import { TreeNode } from './TreeView';
 import { Badge } from './ui/Badge';
 import { Collapsible } from './ui/Collapsible';
@@ -77,7 +77,7 @@ export function SchemaEditor() {
     toggleExpanded,
     setSelectedPath,
     setEditingPath,
-  } = useEditorStore();
+  } = useEditor();
 
   const containerRef = useRef<HTMLDivElement>(null);
 

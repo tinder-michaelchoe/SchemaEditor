@@ -5,7 +5,7 @@
  */
 
 import type { ContextMenuAction } from '../types';
-import { useEditorStore } from '@/store/editorStore';
+import { editorStoreRef } from '@/store/storeRefs';
 import { stringToPath } from '@/utils/pathUtils';
 import { Trash2 } from 'lucide-react';
 
@@ -37,7 +37,7 @@ export const deleteAction: ContextMenuAction = {
     if (typeof childIndex === 'number') {
       // It's an array item, use removeArrayItem
       const arrayPath = [...parentPath, propertyName];
-      useEditorStore.getState().removeArrayItem(arrayPath, childIndex);
+      editorStoreRef.current!.removeArrayItem(arrayPath, childIndex);
     } else {
       console.warn('Cannot delete: component is not in an array', path);
     }

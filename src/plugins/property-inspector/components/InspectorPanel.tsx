@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import styled from 'styled-components';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditor } from '@/store/EditorContext';
 import { getValueAtPath, stringToPath } from '@/utils/pathUtils';
 import { PropertySection } from './PropertySection';
 import { PropertyRow } from './PropertyRow';
@@ -67,7 +67,7 @@ export function InspectorPanel() {
     selectedPath,
     updateValue,
     removeObjectProperty,
-  } = useEditorStore();
+  } = useEditor();
 
   // Get the selected value and its schema
   const { selectedValue, propertySchema } = useMemo(() => {

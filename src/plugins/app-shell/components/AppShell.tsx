@@ -4,7 +4,7 @@ import { TabbedPanel } from './TabbedPanel';
 import type { TabDefinition } from './TabbedPanel';
 import { ResizableDivider } from './ResizableDivider';
 import { Toolbar } from './Toolbar';
-import { usePersistence } from '../hooks/usePersistence';
+import { useUI } from '@/store/UIContext';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const MIN_PANEL_WIDTH = 250;
@@ -140,7 +140,7 @@ export function AppShell({
     setRightPanelTab,
     setDarkMode,
     setIsLeftPanelCollapsed,
-  } = usePersistence();
+  } = useUI();
 
   const handleLeftPanelResize = useCallback(
     (delta: number) => {

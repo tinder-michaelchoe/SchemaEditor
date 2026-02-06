@@ -1,12 +1,13 @@
 /**
  * Selection Store
- * 
+ *
  * Core store for selection state.
- * This is a thin wrapper that integrates with the existing editorStore.
+ * Uses EditorContext + SelectionContext for React access, refs for imperative access.
  */
 
-import { create } from 'zustand';
-import { useEditorStore } from '../../store/editorStore';
+import { useEditorState, useEditorActions } from '../../store/EditorContext';
+import { useHoveredPath, useSetHoveredPath } from '../../store/SelectionContext';
+import { editorStoreRef, selectionStoreRef } from '../../store/storeRefs';
 
 // ============================================================================
 // Types
@@ -25,21 +26,6 @@ interface SelectionActions {
 }
 
 // ============================================================================
-// Hovered Path Store (not in editor store)
-// ============================================================================
-
-/**
- * Separate store for hovered path since it's not in the main editor store
- */
-const useHoveredPathStore = create<{
-  hoveredPath: string | null;
-  setHoveredPath: (path: string | null) => void;
-}>((set) => ({
-  hoveredPath: null,
-  setHoveredPath: (path) => set({ hoveredPath: path }),
-}));
-
-// ============================================================================
 // Selection Hooks
 // ============================================================================
 
@@ -47,9 +33,9 @@ const useHoveredPathStore = create<{
  * Hook to access selection state
  */
 export function useSelectionState(): SelectionState {
-  const { selectedPath, editingPath } = useEditorStore();
-  const { hoveredPath } = useHoveredPathStore();
-  
+  const { selectedPath, editingPath } = useEditorState();
+  const hoveredPath = useHoveredPath();
+
   return {
     selectedPath,
     editingPath,
@@ -61,10 +47,9 @@ export function useSelectionState(): SelectionState {
  * Hook to access selection actions
  */
 export function useSelectionActions(): SelectionActions {
-  const setSelectedPath = useEditorStore((state) => state.setSelectedPath);
-  const setEditingPath = useEditorStore((state) => state.setEditingPath);
-  const setHoveredPath = useHoveredPathStore((state) => state.setHoveredPath);
-  
+  const { setSelectedPath, setEditingPath } = useEditorActions();
+  const setHoveredPath = useSetHoveredPath();
+
   return {
     setSelectedPath,
     setEditingPath,
@@ -76,36 +61,31 @@ export function useSelectionActions(): SelectionActions {
  * Hook to get the selected path
  */
 export function useSelectedPath(): string | null {
-  return useEditorStore((state) => state.selectedPath);
+  const { selectedPath } = useEditorState();
+  return selectedPath;
 }
 
 /**
  * Hook to get the editing path
  */
 export function useEditingPath(): string | null {
-  return useEditorStore((state) => state.editingPath);
+  const { editingPath } = useEditorState();
+  return editingPath;
 }
 
 /**
- * Hook to get the hovered path
- */
-export function useHoveredPath(): string | null {
-  return useHoveredPathStore((state) => state.hoveredPath);
-}
-
-/**
- * Get selection store interface for CoreStores
+ * Get selection store interface for CoreStores (imperative access)
  */
 export function getSelectionStoreInterface() {
   return {
-    getSelectedPath: () => useEditorStore.getState().selectedPath,
-    getEditingPath: () => useEditorStore.getState().editingPath,
-    getHoveredPath: () => useHoveredPathStore.getState().hoveredPath,
-    setSelectedPath: (path: string | null) => 
-      useEditorStore.getState().setSelectedPath(path),
-    setEditingPath: (path: string | null) => 
-      useEditorStore.getState().setEditingPath(path),
-    setHoveredPath: (path: string | null) => 
-      useHoveredPathStore.getState().setHoveredPath(path),
+    getSelectedPath: () => editorStoreRef.current?.selectedPath ?? null,
+    getEditingPath: () => editorStoreRef.current?.editingPath ?? null,
+    getHoveredPath: () => selectionStoreRef.current?.hoveredPath ?? null,
+    setSelectedPath: (path: string | null) =>
+      editorStoreRef.current?.setSelectedPath(path),
+    setEditingPath: (path: string | null) =>
+      editorStoreRef.current?.setEditingPath(path),
+    setHoveredPath: (path: string | null) =>
+      selectionStoreRef.current?.setHoveredPath(path),
   };
 }

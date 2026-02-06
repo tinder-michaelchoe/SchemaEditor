@@ -5,7 +5,7 @@
  */
 
 import type { ContextMenuAction } from '../types';
-import { useEditorStore } from '@/store/editorStore';
+import { editorStoreRef } from '@/store/storeRefs';
 import { stringToPath } from '@/utils/pathUtils';
 import { Box, Rows, Columns, Layers, IterationCw } from 'lucide-react';
 
@@ -42,7 +42,7 @@ export const encloseAction: ContextMenuAction = {
           children: [context.componentData],
         };
         const path = stringToPath(context.componentPath);
-        useEditorStore.getState().updateValue(path, wrapper);
+        editorStoreRef.current!.updateValue(path, wrapper);
       },
     },
     {
@@ -58,7 +58,7 @@ export const encloseAction: ContextMenuAction = {
           children: [context.componentData],
         };
         const path = stringToPath(context.componentPath);
-        useEditorStore.getState().updateValue(path, wrapper);
+        editorStoreRef.current!.updateValue(path, wrapper);
       },
     },
     {
@@ -73,7 +73,7 @@ export const encloseAction: ContextMenuAction = {
           children: [context.componentData],
         };
         const path = stringToPath(context.componentPath);
-        useEditorStore.getState().updateValue(path, wrapper);
+        editorStoreRef.current!.updateValue(path, wrapper);
       },
     },
     {
@@ -89,7 +89,7 @@ export const encloseAction: ContextMenuAction = {
           template: context.componentData,
         };
         const path = stringToPath(context.componentPath);
-        useEditorStore.getState().updateValue(path, wrapper);
+        editorStoreRef.current!.updateValue(path, wrapper);
       },
     },
   ],

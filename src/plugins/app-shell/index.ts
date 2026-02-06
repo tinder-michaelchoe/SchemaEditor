@@ -17,4 +17,4 @@ export { TabbedPanel } from './components/TabbedPanel';
 export type { TabDefinition } from './components/TabbedPanel';
 export { ResizableDivider } from './components/ResizableDivider';
 export { Toolbar } from './components/Toolbar';
-export { usePersistence } from './hooks/usePersistence';
+export { useUI } from '@/store/UIContext';

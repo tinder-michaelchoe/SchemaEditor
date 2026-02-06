@@ -1,19 +1,15 @@
 /**
  * Document Store
- * 
+ *
  * Core store for document state (schema, data, errors).
- * This is a thin wrapper that integrates with the existing editorStore.
+ * Uses EditorContext refs for imperative access and EditorContext hooks for React access.
  */
 
-import { create } from 'zustand';
 import type { JSONSchema, SchemaContext, ValidationError } from '../../types/schema';
 import type { DocumentStore } from '../ActionAPI';
-import { useEditorStore } from '../../store/editorStore';
-import {
-  getValueAtPath,
-  setValueAtPath,
-  pathToString,
-} from '../../utils/pathUtils';
+import { useEditorState } from '../../store/EditorContext';
+import { editorStoreRef } from '../../store/storeRefs';
+import { getValueAtPath } from '../../utils/pathUtils';
 
 // ============================================================================
 // Types
@@ -32,44 +28,42 @@ interface DocumentState {
 // ============================================================================
 
 /**
- * Creates a DocumentStore adapter from the editor store
- * This allows the ActionAPI to work with the existing store
+ * Creates a DocumentStore adapter using store refs
  */
 export function createDocumentStoreAdapter(): DocumentStore {
   return {
-    getSchema: () => useEditorStore.getState().schema,
-    getData: () => useEditorStore.getState().data,
+    getSchema: () => editorStoreRef.current!.schema,
+    getData: () => editorStoreRef.current!.data,
     getValueAtPath: (path) => {
-      const data = useEditorStore.getState().data;
+      const data = editorStoreRef.current!.data;
       return getValueAtPath(data, path);
     },
     setValueAtPath: (path, value) => {
-      useEditorStore.getState().updateValue(path, value);
+      editorStoreRef.current!.updateValue(path, value);
     },
     addArrayItem: (path, value) => {
-      useEditorStore.getState().addArrayItem(path, value);
+      editorStoreRef.current!.addArrayItem(path, value);
     },
     removeArrayItem: (path, index) => {
-      useEditorStore.getState().removeArrayItem(path, index);
+      editorStoreRef.current!.removeArrayItem(path, index);
     },
     addObjectProperty: (path, key, value) => {
-      useEditorStore.getState().addObjectProperty(path, key, value);
+      editorStoreRef.current!.addObjectProperty(path, key, value);
     },
     removeObjectProperty: (path, key) => {
-      useEditorStore.getState().removeObjectProperty(path, key);
+      editorStoreRef.current!.removeObjectProperty(path, key);
     },
     setData: (data) => {
-      useEditorStore.getState().setData(data);
+      editorStoreRef.current!.setData(data);
     },
     resetData: () => {
-      useEditorStore.getState().resetData();
+      editorStoreRef.current!.resetData();
     },
     validate: () => {
-      const state = useEditorStore.getState();
-      state.validate();
+      editorStoreRef.current!.validate();
       return {
-        isValid: state.isValid,
-        errors: state.errors,
+        isValid: editorStoreRef.current!.isValid,
+        errors: editorStoreRef.current!.errors,
       };
     },
   };
@@ -79,8 +73,8 @@ export function createDocumentStoreAdapter(): DocumentStore {
  * Hook to access document state
  */
 export function useDocumentState(): DocumentState {
-  const { schema, schemaContext, data, errors, isValid } = useEditorStore();
-  
+  const { schema, schemaContext, data, errors, isValid } = useEditorState();
+
   return {
     schema,
     schemaContext,
@@ -94,7 +88,7 @@ export function useDocumentState(): DocumentState {
  * Hook to check if a document is loaded
  */
 export function useHasDocument(): boolean {
-  const schema = useEditorStore((state) => state.schema);
+  const { schema } = useEditorState();
   return schema !== null;
 }
 
@@ -102,12 +96,14 @@ export function useHasDocument(): boolean {
  * Hook to get validation errors
  */
 export function useValidationErrors(): Map<string, ValidationError[]> {
-  return useEditorStore((state) => state.errors);
+  const { errors } = useEditorState();
+  return errors;
 }
 
 /**
  * Hook to check validation status
  */
 export function useIsValid(): boolean {
-  return useEditorStore((state) => state.isValid);
+  const { isValid } = useEditorState();
+  return isValid;
 }

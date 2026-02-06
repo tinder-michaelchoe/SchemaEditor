@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { useDragDropStore } from './DragDropManager';
+import { useDragData } from './DragDropManager';
 
 const FloatingContainer = styled.div`
   position: fixed;
@@ -45,7 +45,7 @@ interface DragPreviewProps {
  * Should be rendered at the app root level
  */
 export function DragPreview({ renderPreview }: DragPreviewProps) {
-  const dragData = useDragDropStore((state) => state.dragData);
+  const dragData = useDragData();
   
   if (!dragData) {
     return null;

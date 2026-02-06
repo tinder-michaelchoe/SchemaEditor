@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { useSyncExternalStore } from 'react';
 import type * as React from 'react';
 
 // Types for drag-drop operations
@@ -38,16 +38,16 @@ export interface IDragDropManager {
   // State
   isDragging: () => boolean;
   getDragData: () => DragData | null;
-  
+
   // Actions
   startDrag: (source: DragSource, position: { x: number; y: number }) => void;
   updatePosition: (position: { x: number; y: number }) => void;
   endDrag: () => void;
-  
+
   // Drop validation
   canDrop: (target: DropTarget) => boolean;
   handleDrop: (target: DropTarget) => void;
-  
+
   // Event subscription
   onDragStart: (callback: (data: DragData) => void) => () => void;
   onDragMove: (callback: (data: DragData) => void) => () => void;
@@ -55,25 +55,42 @@ export interface IDragDropManager {
   onDrop: (callback: (source: DragSource, target: DropTarget) => void) => () => void;
 }
 
-interface DragDropState {
-  dragData: DragData | null;
-  listeners: {
-    dragStart: Set<(data: DragData) => void>;
-    dragMove: Set<(data: DragData) => void>;
-    dragEnd: Set<() => void>;
-    drop: Set<(source: DragSource, target: DropTarget) => void>;
-  };
+// ─── Module-level mutable state (replaces Zustand store) ─────────────────────
+
+let dragData: DragData | null = null;
+
+const eventListeners = {
+  dragStart: new Set<(data: DragData) => void>(),
+  dragMove: new Set<(data: DragData) => void>(),
+  dragEnd: new Set<() => void>(),
+  drop: new Set<(source: DragSource, target: DropTarget) => void>(),
+};
+
+// ─── React subscription mechanism (useSyncExternalStore) ─────────────────────
+
+const reactSubscribers = new Set<() => void>();
+
+function notifyReact(): void {
+  reactSubscribers.forEach(cb => cb());
 }
 
-export const useDragDropStore = create<DragDropState>(() => ({
-  dragData: null,
-  listeners: {
-    dragStart: new Set(),
-    dragMove: new Set(),
-    dragEnd: new Set(),
-    drop: new Set(),
-  },
-}));
+function subscribe(cb: () => void): () => void {
+  reactSubscribers.add(cb);
+  return () => { reactSubscribers.delete(cb); };
+}
+
+function getSnapshot(): DragData | null {
+  return dragData;
+}
+
+function getServerSnapshot(): DragData | null {
+  return null;
+}
+
+/** React hook to subscribe to drag data changes */
+export function useDragData(): DragData | null {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
 
 /**
  * Creates a DragDropManager instance
@@ -81,45 +98,41 @@ export const useDragDropStore = create<DragDropState>(() => ({
 export function createDragDropManager(): IDragDropManager {
   return {
     isDragging: () => {
-      return useDragDropStore.getState().dragData !== null;
+      return dragData !== null;
     },
 
     getDragData: () => {
-      return useDragDropStore.getState().dragData;
+      return dragData;
     },
 
     startDrag: (source, position) => {
-      const dragData: DragData = {
+      dragData = {
         source,
         startPosition: position,
         currentPosition: position,
       };
-      
-      useDragDropStore.setState({ dragData });
-      
+
+      notifyReact();
+
       // Notify listeners
-      const { listeners } = useDragDropStore.getState();
-      listeners.dragStart.forEach(cb => cb(dragData));
+      eventListeners.dragStart.forEach(cb => cb(dragData!));
     },
 
     updatePosition: (position) => {
-      const { dragData } = useDragDropStore.getState();
       if (!dragData) return;
-      
-      const updatedData = {
+
+      dragData = {
         ...dragData,
         currentPosition: position,
       };
-      
-      useDragDropStore.setState({ dragData: updatedData });
-      
+
+      notifyReact();
+
       // Notify listeners
-      const { listeners } = useDragDropStore.getState();
-      listeners.dragMove.forEach(cb => cb(updatedData));
+      eventListeners.dragMove.forEach(cb => cb(dragData!));
     },
 
     endDrag: () => {
-      const { dragData } = useDragDropStore.getState();
       console.log('[DragDropManager] endDrag called, current dragData:', dragData ? 'exists' : 'null');
 
       // Call onDragEnd callback with success=false (cancelled)
@@ -127,16 +140,16 @@ export function createDragDropManager(): IDragDropManager {
         dragData.source.onDragEnd(false);
       }
 
-      useDragDropStore.setState({ dragData: null });
+      dragData = null;
       console.log('[DragDropManager] dragData cleared');
 
+      notifyReact();
+
       // Notify listeners
-      const { listeners } = useDragDropStore.getState();
-      listeners.dragEnd.forEach(cb => cb());
+      eventListeners.dragEnd.forEach(cb => cb());
     },
 
     canDrop: (target) => {
-      const { dragData } = useDragDropStore.getState();
       if (!dragData) return false;
 
       // If target specifies accepted types, check if source matches
@@ -161,7 +174,6 @@ export function createDragDropManager(): IDragDropManager {
     },
 
     handleDrop: (target) => {
-      const { dragData, listeners } = useDragDropStore.getState();
       if (!dragData) return;
 
       // Call onDragEnd callback with success=true
@@ -170,42 +182,39 @@ export function createDragDropManager(): IDragDropManager {
       }
 
       // Notify drop listeners
-      listeners.drop.forEach(cb => cb(dragData.source, target));
+      eventListeners.drop.forEach(cb => cb(dragData!.source, target));
 
       // End the drag
-      useDragDropStore.setState({ dragData: null });
-      listeners.dragEnd.forEach(cb => cb());
+      dragData = null;
+      notifyReact();
+      eventListeners.dragEnd.forEach(cb => cb());
     },
 
     onDragStart: (callback) => {
-      const { listeners } = useDragDropStore.getState();
-      listeners.dragStart.add(callback);
+      eventListeners.dragStart.add(callback);
       return () => {
-        listeners.dragStart.delete(callback);
+        eventListeners.dragStart.delete(callback);
       };
     },
 
     onDragMove: (callback) => {
-      const { listeners } = useDragDropStore.getState();
-      listeners.dragMove.add(callback);
+      eventListeners.dragMove.add(callback);
       return () => {
-        listeners.dragMove.delete(callback);
+        eventListeners.dragMove.delete(callback);
       };
     },
 
     onDragEnd: (callback) => {
-      const { listeners } = useDragDropStore.getState();
-      listeners.dragEnd.add(callback);
+      eventListeners.dragEnd.add(callback);
       return () => {
-        listeners.dragEnd.delete(callback);
+        eventListeners.dragEnd.delete(callback);
       };
     },
 
     onDrop: (callback) => {
-      const { listeners } = useDragDropStore.getState();
-      listeners.drop.add(callback);
+      eventListeners.drop.add(callback);
       return () => {
-        listeners.drop.delete(callback);
+        eventListeners.drop.delete(callback);
       };
     },
   };

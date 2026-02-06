@@ -11,7 +11,7 @@ import { pathToString } from '../../utils/pathUtils';
 import { DraggableArrayItem } from './DraggableArrayItem';
 import { ChildrenDropIndicator } from './ChildrenDropIndicator';
 import type { DragItemData } from './DraggableArrayItem';
-import { useEditorStore } from '../../store/editorStore';
+import { useEditorActions } from '../../store/EditorContext';
 
 /* ------------------------------------------------------------------ */
 /*  Styled components                                                  */
@@ -182,8 +182,7 @@ export function ArrayNode({
   const arrayPathStr = pathToString(path);
 
   // Get store actions for drag-drop
-  const moveArrayItem = useEditorStore((state) => state.moveArrayItem);
-  const moveItemBetweenArrays = useEditorStore((state) => state.moveItemBetweenArrays);
+  const { moveArrayItem, moveItemBetweenArrays } = useEditorActions();
 
   // Get item schema
   const itemSchema = resolved.items && !Array.isArray(resolved.items)

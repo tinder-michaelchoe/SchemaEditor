@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import styled, { css } from 'styled-components';
-import { useDragDropStore } from '@/plugins/drag-drop-service/DragDropManager';
+import { useDragData, createDragDropManager } from '@/plugins/drag-drop-service/DragDropManager';
 import type { DragSource } from '@/plugins/drag-drop-service/DragDropManager';
+
+const dragDropManager = createDragDropManager();
 
 export type DropPosition = 'before' | 'after' | 'inside';
 
@@ -106,7 +108,7 @@ export function DropZone({
   showIndicator = true,
 }: DropZoneProps) {
   const [isOver, setIsOver] = useState(false);
-  const dragData = useDragDropStore((state) => state.dragData);
+  const dragData = useDragData();
 
   const isDragging = dragData !== null;
   const canAccept = isDragging && accepts.includes(dragData.source.type);
@@ -124,7 +126,7 @@ export function DropZone({
   const handleMouseUp = useCallback(() => {
     if (canAccept && dragData) {
       onDrop(dragData.source, position);
-      useDragDropStore.setState({ dragData: null });
+      dragDropManager.endDrag();
     }
     setIsOver(false);
   }, [canAccept, dragData, onDrop, position]);
@@ -177,7 +179,7 @@ export function DroppableWrapper({
   showInside = false,
   className,
 }: DroppableWrapperProps) {
-  const dragData = useDragDropStore((state) => state.dragData);
+  const dragData = useDragData();
   const isDragging = dragData !== null;
 
   return (

@@ -13,7 +13,7 @@ import { ChatInterface } from './ChatInterface';
 import { PreviewCanvas } from './PreviewCanvas';
 import { litellmService } from '@/services/litellm';
 import { imageUtils } from '@/services/imageUtils';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditor } from '@/store/EditorContext';
 import type { ChatMessage } from '@/types/litellm';
 import { Copy, CheckCircle } from 'lucide-react';
 
@@ -260,7 +260,7 @@ export function GenerateFromImageModal({
   const lastValidatedJSON = useRef<unknown>(null);
   const lastErrorSentJSON = useRef<unknown>(null);
 
-  const { setData, errors, isValid } = useEditorStore();
+  const { setData, errors, isValid } = useEditor();
 
   // Reset state when modal closes
   useEffect(() => {

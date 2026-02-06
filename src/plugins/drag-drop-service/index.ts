@@ -33,7 +33,7 @@ export function getDragDropManager(): IDragDropManager | null {
 export { manifest };
 export { DragPreview } from './DragPreview';
 export { useDragSource, useDropTarget, useDragState } from './useDragDrop';
-export { useDragDropStore, createDragDropManager } from './DragDropManager';
+export { useDragData, createDragDropManager } from './DragDropManager';
 export {
   DragDropRegistry,
   getDragDropRegistry,

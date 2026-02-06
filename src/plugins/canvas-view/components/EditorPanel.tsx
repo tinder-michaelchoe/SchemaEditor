@@ -3,9 +3,9 @@ import styled, { css } from 'styled-components';
 import { CanvasView } from './CanvasView';
 import { SplitView } from './SplitView';
 import { SchemaEditor } from '@/components/SchemaEditor';
-import { usePersistentUIStore } from '@/plugins/app-shell/hooks/usePersistence';
+import { useUI } from '@/store/UIContext';
 import { InspectorPanel } from '@/plugins/property-inspector/components/InspectorPanel';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorState } from '@/store/EditorContext';
 
 type ViewMode = 'tree' | 'canvas' | 'split';
 
@@ -65,8 +65,8 @@ const ViewContent = styled.div`
  * This component manages the view mode state and renders the appropriate view
  */
 export function EditorPanel({ defaultViewMode = 'tree' }: EditorPanelProps) {
-  const { rightPanelTab, setRightPanelTab } = usePersistentUIStore();
-  const { selectedPath } = useEditorStore();
+  const { rightPanelTab, setRightPanelTab } = useUI();
+  const { selectedPath } = useEditorState();
 
   // Create inspector panel when a component is selected
   const inspectorPanel = selectedPath ? <InspectorPanel /> : null;

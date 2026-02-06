@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo } from 'react';
 import styled, { css } from 'styled-components';
 import { Monitor, Code, ChevronDown, ChevronRight, RotateCcw, WrapText } from 'lucide-react';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditor } from '@/store/EditorContext';
 import { DevicePreview } from '@/components/Preview/DevicePreview';
 import { RawJSONPreview } from '@/components/Preview/RawJSONPreview';
 import { Button } from '@/components/ui/Button';
-import { usePersistentUIStore } from '@/plugins/app-shell/hooks/usePersistence';
+import { useUI } from '@/store/UIContext';
 
 const PanelContainer = styled.div`
   height: 100%;
@@ -143,13 +143,13 @@ function stripEditorProperties(obj: unknown): unknown {
 }
 
 export function OutputPanel() {
-  const { leftPanelTab, setLeftPanelTab, isJsonWrapEnabled, setIsJsonWrapEnabled } = usePersistentUIStore();
+  const { leftPanelTab, setLeftPanelTab, isJsonWrapEnabled, setIsJsonWrapEnabled } = useUI();
 
   // Use persisted tab, default to 'json' if invalid
   const activeTab: TabId = (leftPanelTab === 'preview' || leftPanelTab === 'json')
     ? leftPanelTab
     : 'json';
-  
+
   const {
     data,
     selectedPath,
@@ -159,7 +159,7 @@ export function OutputPanel() {
     expandAll,
     collapseAll,
     resetData,
-  } = useEditorStore();
+  } = useEditor();
 
   // Strip editor-only properties for display in JSON output
   const displayData = useMemo(() => stripEditorProperties(data), [data]);

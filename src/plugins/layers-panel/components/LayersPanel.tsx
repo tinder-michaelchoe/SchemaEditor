@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import { Layers, ChevronDown, ChevronRight } from 'lucide-react';
-import { useEditorStore } from '@/store/editorStore';
-import { usePersistentUIStore } from '@/plugins/app-shell/hooks/usePersistence';
+import { useEditor } from '@/store/EditorContext';
+import { useUI } from '@/store/UIContext';
 import { LayerTree } from './LayerTree';
 import { stringToPath, pathToString } from '@/utils/pathUtils';
 
@@ -92,12 +92,12 @@ export function LayersPanel() {
     updateValue,
     moveArrayItem,
     moveItemBetweenArrays,
-  } = useEditorStore();
+  } = useEditor();
 
   const {
     layersExpandedPaths,
     setLayersExpandedPaths,
-  } = usePersistentUIStore();
+  } = useUI();
 
   // Get expanded paths as Set for efficient lookup
   const expandedPathsSet = useMemo(() => {

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { useEditorStore } from '../../store/editorStore';
+import { useEditorState } from '../../store/EditorContext';
 import { Input } from '../ui/Input';
 import { disabledStyles } from '@/styles/mixins';
 
@@ -56,7 +56,7 @@ interface StyleIdInputProps {
 const CUSTOM_OPTION = '__custom__';
 
 export function StyleIdInput({ value, onChange, error, disabled }: StyleIdInputProps) {
-  const { data } = useEditorStore();
+  const { data } = useEditorState();
 
   // Get defined styles from the document
   const definedStyles = useMemo(() => {

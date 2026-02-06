@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import styled, { css } from 'styled-components';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditor } from '@/store/EditorContext';
 import { getValueAtPath, stringToPath } from '@/utils/pathUtils';
 import { ChevronRight, Plus, Check, Palette, X, Pencil } from 'lucide-react';
 
@@ -391,7 +391,7 @@ const AccentButton = styled.button`
 /* ------------------------------------------------------------------ */
 
 export function StylesPanel() {
-  const { data, selectedPath, updateValue } = useEditorStore();
+  const { data, selectedPath, updateValue } = useEditor();
   const [isExpanded, setIsExpanded] = useState(true);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newStyleName, setNewStyleName] = useState('');

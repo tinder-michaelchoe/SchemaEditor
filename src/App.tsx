@@ -2,12 +2,13 @@
  * Main App component using the plugin architecture
  * Integrates all visual editing plugins into a cohesive application
  */
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { ThemeProvider } from 'styled-components';
 import { lightTheme, darkTheme } from './styles/theme';
 import { GlobalStyles } from './styles/GlobalStyles';
-import { useEditorStore } from './store/editorStore';
-import { usePersistence } from './plugins/app-shell/hooks/usePersistence';
+import { EditorProvider, useEditor } from './store/EditorContext';
+import { UIProvider } from './store/UIContext';
+import { SelectionProvider } from './store/SelectionContext';
 import { AppShell } from './plugins/app-shell/components/AppShell';
 import { OutputPanel } from './plugins/output-panel/components/OutputPanel';
 import { EditorPanel } from './plugins/canvas-view/components/EditorPanel';
@@ -19,6 +20,7 @@ import type { TabDefinition } from './plugins/app-shell/components/TabbedPanel';
 import { initSchemaParser } from './services/schemaParser';
 import { initDragDropRegistry } from './plugins/drag-drop-service';
 import { initContextMenuRegistry } from './plugins/context-menu/ContextMenuRegistry';
+import { initializeCore } from './core';
 
 // Wrapper components for tab definitions
 function OutputPanelWrapper() {
@@ -29,19 +31,30 @@ function EditorPanelWrapper() {
   return <EditorPanel />;
 }
 
-function App() {
+/** Initializes core systems once all providers are mounted */
+function CoreInitializer() {
+  const initialized = useRef(false);
+  useEffect(() => {
+    if (!initialized.current) {
+      initializeCore();
+      initialized.current = true;
+    }
+  }, []);
+  return null;
+}
+
+function AppInner() {
   const {
     schema,
     data,
     isValid,
     errors,
+    isDarkMode,
     setSchema,
     importJSON,
     expandErrorPaths,
     selectedPath,
-  } = useEditorStore();
-
-  const { isDarkMode } = usePersistence();
+  } = useEditor();
 
   const [isErrorConsoleOpen, setIsErrorConsoleOpen] = useState(false);
   const [highlightedErrorLine, setHighlightedErrorLine] = useState<number | null>(null);
@@ -125,6 +138,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyles />
+      <CoreInitializer />
       <AppShell
         leftTabs={leftTabs}
         rightTabs={rightTabs}
@@ -156,6 +170,18 @@ function App() {
       {/* Global drag preview */}
       <DragPreview />
     </ThemeProvider>
+  );
+}
+
+function App() {
+  return (
+    <EditorProvider>
+      <UIProvider>
+        <SelectionProvider>
+          <AppInner />
+        </SelectionProvider>
+      </UIProvider>
+    </EditorProvider>
   );
 }
 

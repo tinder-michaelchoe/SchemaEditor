@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { useDragDropStore, createDragDropManager } from './DragDropManager';
+import { useDragData, createDragDropManager } from './DragDropManager';
 import type { DragSource, DropTarget, DragData } from './DragDropManager';
 
 // Create a singleton manager instance
@@ -134,15 +134,15 @@ export function useDropTarget(
   const [isOver, setIsOver] = useState(false);
   const [canDrop, setCanDrop] = useState(false);
   
-  const dragData = useDragDropStore((state) => state.dragData);
-  
+  const dragData = useDragData();
+
   useEffect(() => {
     if (!dragData) {
       setIsOver(false);
       setCanDrop(false);
       return;
     }
-    
+
     // Check if we can accept this drag
     if (target.accepts && !target.accepts.includes(dragData.source.type)) {
       setCanDrop(false);
@@ -150,27 +150,27 @@ export function useDropTarget(
       setCanDrop(true);
     }
   }, [dragData, target.accepts]);
-  
+
   const handleDragOver = useCallback((e: React.DragEvent | React.MouseEvent) => {
     e.preventDefault();
     if (canDrop) {
       setIsOver(true);
     }
   }, [canDrop]);
-  
+
   const handleDragLeave = useCallback(() => {
     setIsOver(false);
   }, []);
-  
+
   const handleDrop = useCallback((e: React.DragEvent | React.MouseEvent) => {
     e.preventDefault();
     setIsOver(false);
 
-    const { dragData } = useDragDropStore.getState();
-    if (!dragData || !canDrop) return;
+    const currentDragData = dragDropManager.getDragData();
+    if (!currentDragData || !canDrop) return;
 
     if (onDrop) {
-      onDrop(dragData.source);
+      onDrop(currentDragData.source);
     }
 
     // Use the manager's handleDrop which calls onDragEnd(true)
@@ -192,7 +192,7 @@ export function useDropTarget(
  * Hook to access current drag state
  */
 export function useDragState() {
-  const dragData = useDragDropStore((state) => state.dragData);
+  const dragData = useDragData();
   
   return {
     isDragging: dragData !== null,

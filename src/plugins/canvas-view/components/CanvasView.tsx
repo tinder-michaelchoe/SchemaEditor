@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, ReactNode, useMemo } from 'react';
-import { useEditorStore } from '@/store/editorStore';
-import { usePersistentUIStore } from '@/plugins/app-shell/hooks/usePersistence';
+import { useEditorState, useEditorActions } from '@/store/EditorContext';
+import { useUIState, useUIActions } from '@/store/UIContext';
+import { editorStoreRef } from '@/store/storeRefs';
 import { useCanvasNavigation } from '../hooks/useCanvasNavigation';
 import { useCanvasSelection } from '../hooks/useCanvasSelection';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -295,13 +296,16 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
   const {
     data,
     selectedPath,
+  } = useEditorState();
+
+  const {
     setSelectedPath,
     updateValue,
     addArrayItem,
     removeArrayItem,
     undo,
     redo,
-  } = useEditorStore();
+  } = useEditorActions();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pendingDeletePath, setPendingDeletePath] = useState<string | null>(null);
@@ -316,6 +320,9 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
     isLayersPanelCollapsed,
     isMinimapExpanded,
     inspectorWidth,
+  } = useUIState();
+
+  const {
     setCanvasZoom,
     setCanvasPan,
     setCanvasDevice,
@@ -323,7 +330,7 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
     setIsLayersPanelCollapsed,
     setIsMinimapExpanded,
     setInspectorWidth,
-  } = usePersistentUIStore();
+  } = useUIActions();
 
   const [currentTool, setCurrentTool] = useState<Tool>('select');
   const [showGrid, setShowGrid] = useState(false);
@@ -523,7 +530,7 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
             fromIndex: sourceIndex,
             toIndex: zone.index,
           });
-          useEditorStore.getState().moveArrayItem(sourceArrayPath, sourceIndex, zone.index);
+          editorStoreRef.current!.moveArrayItem(sourceArrayPath, sourceIndex, zone.index);
         } else {
           // Moving between arrays - use moveItemBetweenArrays
           console.log('[CanvasView] Moving between arrays:', {
@@ -532,7 +539,7 @@ export function CanvasView({ inspectorPanel }: CanvasViewProps) {
             fromIndex: sourceIndex,
             toIndex: zone.index,
           });
-          useEditorStore.getState().moveItemBetweenArrays(
+          editorStoreRef.current!.moveItemBetweenArrays(
             sourceArrayPath,
             sourceIndex,
             targetPathArray,

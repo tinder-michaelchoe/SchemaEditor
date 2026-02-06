@@ -19,9 +19,10 @@ export {
   useSelectionActions,
   useSelectedPath,
   useEditingPath,
-  useHoveredPath,
   getSelectionStoreInterface,
 } from './selectionStore';
+
+export { useHoveredPath } from '../../store/SelectionContext';
 
 // UI store
 export {

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import { pathToString } from '@/utils/pathUtils';
-import { useEditorStore } from '@/store/editorStore';
+import { useEditorState } from '@/store/EditorContext';
 import { useDragSource } from '@/plugins/drag-drop-service';
 
 // Style definition matching the CLADS schema
@@ -399,7 +399,7 @@ export function CanvasNode({
   });
 
   // Get styles from document
-  const data = useEditorStore((state) => state.data);
+  const { data } = useEditorState();
   const documentStyles = (data as Record<string, unknown>)?.styles as Record<string, StyleDefinition> || {};
 
   // Resolve the node's style
